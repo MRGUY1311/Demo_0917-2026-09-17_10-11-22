@@ -6,6 +6,7 @@ public class PlayerAim : MonoBehaviour
 {
     private Player _player;
     private Camera aimCamera;
+    public Vector3 mouseAim{get;private set;}
     void Awake()
     {
         _player = GetComponent<Player>();
@@ -16,12 +17,6 @@ public class PlayerAim : MonoBehaviour
             return;
         }
         aimCamera = _player.GetCamera();
-        if(!aimCamera)
-        {
-            Debug.LogError("Require aim camera.",this);
-            enabled = false;
-            return;
-        }
 
     }
     void Update()
@@ -33,10 +28,12 @@ public class PlayerAim : MonoBehaviour
             return;
 
         Vector3 point = ray.GetPoint(distance);
-        Vector3 dir = point - transform.position;
-        dir.y = 0f;
+        Vector3 aim = point - transform.position;
+        aim.y = 0f;
+        
+        mouseAim = aim;
 
-        if (dir.sqrMagnitude > 1e-4f)
-            transform.rotation = Quaternion.LookRotation(dir);
     }
+
+
 }
