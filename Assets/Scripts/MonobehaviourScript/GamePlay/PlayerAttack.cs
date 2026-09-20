@@ -15,32 +15,54 @@ public class PlayerAttack : MonoBehaviour
     private PlayerAim _playerAim;
     private PlayerMovement _playerMovement;
     private Animator _animator;
-    private Vector3 attatckDir;
+    private Vector3 attackDir;
     private AttackPhase currentPhase = AttackPhase.None;
 
-    void Awake()
+    private void Awake()
     {
-        _player = RequireComponent<Player>();
+        if (!TryInitialize())
+        {
+            enabled = false;
+            return;
+        }
+    }
+
+    private bool TryInitialize()
+    {
+        if (!TryRequireComponent(out _player) ||
+            !TryRequireComponent(out _playerFacing) ||
+            !TryRequireComponent(out _playerAim) ||
+            !TryRequireComponent(out _playerMovement))
+        {
+            return false;
+        }
+
         _animator = _player.GetAnimator();
-        _playerFacing = RequireComponent<PlayerFacing>();
-        _playerAim = RequireComponent<PlayerAim>();
-        _playerMovement = RequireComponent<PlayerMovement>();
-    }
-    private T RequireComponent<T>() where T : MonoBehaviour
-    {
-    T component = GetComponent<T>();
 
-    if (component == null)
-    {
-        Debug.LogError($"Require {typeof(T).Name}.", this);
-        enabled = false;
-    }
+        if (_animator == null)
+        {
+            Debug.LogError("Require Animator.", this);
+            return false;
+        }
 
-    return component;
+        return true;
+    }
+    private bool TryRequireComponent<T>(out T component) where T : Component
+    {
+        if(TryGetComponent<T>(out component))
+            return true;
+        Debug.LogError($"Require {typeof(T).Name}.",this);
+        return false;
     }
     
     public void OnAttack(InputAction.CallbackContext context)
     {
+        // Learning checkpoint: Invoke Unity Events can call this for Started, Performed, and Canceled.
+        // We intentionally do not filter `context.performed` yet.
+        // Reproduce: hold the attack button until the attack ends, then release it. If currentPhase is None,
+        // the Canceled callback can start an unintended second attack. This also becomes a potential
+        // "ghost input" when an Input Buffer is added.
+        // Future fix: add `if (!context.performed) return;` before calling startAttack().
         startAttack();
     }
 
@@ -48,8 +70,8 @@ public class PlayerAttack : MonoBehaviour
     {
         if(currentPhase != AttackPhase.None)
             return;
-        attatckDir = _playerAim.mouseAim;
-        _playerFacing.ChangeFacing(attatckDir);
+        attackDir = _playerAim.mouseAim;
+        _playerFacing.ChangeFacing(attackDir);
         _playerFacing.Lock();
         _playerMovement.SetMoveAllowed(false);
 

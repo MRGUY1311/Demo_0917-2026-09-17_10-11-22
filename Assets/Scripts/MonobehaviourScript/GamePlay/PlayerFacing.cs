@@ -1,13 +1,15 @@
+using System;
 using UnityEngine;
 
 public class PlayerFacing : MonoBehaviour
 {
-    private CharacterController controller;
     private Player _player;
     private Vector3 dir;
+    private Vector3 pendingMoveDir;
     private bool canChangeFacing = true;
     void Awake()
     {
+
         _player = GetComponent<Player>();
         if (!_player)
         {
@@ -15,14 +17,23 @@ public class PlayerFacing : MonoBehaviour
             enabled = false;
             return;
         }
-        controller = _player.GetCharacterController();
         
     }
 
     public void ChangeFacing(Vector3 targetDir)
     {
-        if(canChangeFacing)
+        if(canChangeFacing && targetDir.sqrMagnitude > 1e-4f)
             dir = targetDir;
+    }
+    public void WirtePendingMoveDir(Vector3 targetDir)
+    {
+        pendingMoveDir = targetDir;
+    }
+    private void OnStateChange()
+    {
+        if(pendingMoveDir.sqrMagnitude > 1e-4f)
+            dir = pendingMoveDir;
+        pendingMoveDir = Vector3.zero;
     }
     
     public void Lock()
@@ -32,7 +43,9 @@ public class PlayerFacing : MonoBehaviour
     public void UnLock()
     {
         canChangeFacing = true;
+        OnStateChange();
     } 
+
     void Update()
     {
         if(dir.sqrMagnitude > 1e-4f)
@@ -40,4 +53,5 @@ public class PlayerFacing : MonoBehaviour
             transform.rotation = Quaternion.LookRotation(dir);
         }
     }
+
 }
