@@ -28,11 +28,15 @@ public class PlayerFacing : MonoBehaviour
     public void WirtePendingMoveDir(Vector3 targetDir)
     {
         pendingMoveDir = targetDir;
+        Debug.Log($"PlayerFacing:pendingMoveDir is {pendingMoveDir}.",this);
     }
     private void OnStateChange()
     {
         if(pendingMoveDir.sqrMagnitude > 1e-4f)
+        {
             dir = pendingMoveDir;
+            Debug.Log($"PlayerFacings:sample pending direction.",this);
+        }
         pendingMoveDir = Vector3.zero;
     }
     

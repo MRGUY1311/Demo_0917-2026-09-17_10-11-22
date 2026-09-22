@@ -66,12 +66,14 @@ public class PlayerMovement : MonoBehaviour
         Vector3 worldMoveDir = cameraRight*dir.x+cameraForward*dir.y;
 
         if(canMove)
+        {
             _playerFacing.ChangeFacing(worldMoveDir);
             if(worldMoveDir.sqrMagnitude > 1)
                 worldMoveDir.Normalize();
             _controller.Move(worldMoveDir*maxVelocity*Time.deltaTime);
             if(Time.frameCount%30 == 0)
                 Debug.Log($"velocitiy is {_controller.velocity}");
+        }
         else
             _playerFacing.WirtePendingMoveDir(worldMoveDir);
 

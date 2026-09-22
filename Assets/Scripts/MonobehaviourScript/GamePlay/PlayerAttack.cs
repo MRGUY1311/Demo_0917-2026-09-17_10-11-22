@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;//used to simulate input
 public enum AttackPhase
 {
     None,
@@ -18,6 +20,12 @@ public class PlayerAttack : MonoBehaviour
     private Vector3 attackDir;
     private AttackPhase currentPhase = AttackPhase.None;
 
+    [SerializeField]private float hitRadius;
+    [SerializeField]private float hitDistance;
+    [SerializeField]private float hitHeight;
+    [SerializeField]private LayerMask targetMask;
+
+    [SerializeField]private float lightAttackDamage = 1;
     private void Awake()
     {
         if (!TryInitialize())
@@ -63,10 +71,10 @@ public class PlayerAttack : MonoBehaviour
         // the Canceled callback can start an unintended second attack. This also becomes a potential
         // "ghost input" when an Input Buffer is added.
         // Future fix: add `if (!context.performed) return;` before calling startAttack().
-        startAttack();
+        StartAttack();
     }
 
-    private void startAttack()
+    private void StartAttack()
     {
         if(currentPhase != AttackPhase.None)
             return;
@@ -75,24 +83,44 @@ public class PlayerAttack : MonoBehaviour
         _playerFacing.Lock();
         _playerMovement.SetMoveAllowed(false);
 
-        StartCoroutine(attacking());
+        StartCoroutine(Attacking());
     }
-    IEnumerator attacking()
+    IEnumerator Attacking()
     {
         _animator.SetTrigger("AttackLight");
         currentPhase = AttackPhase.Startup;
         yield return new WaitForSeconds(0.333f);
         currentPhase = AttackPhase.Active;
+        ResolveLightHit();
         yield return new WaitForSeconds(0.133f);
         currentPhase = AttackPhase.Recovery;
+        
         yield return new WaitForSeconds(0.333f);
-        endAttack();
+        EndAttack();
     }
-    private void endAttack()
+    private void EndAttack()
     {
-        _playerMovement.SetMoveAllowed(true);
         _playerFacing.UnLock();
+        _playerMovement.SetMoveAllowed(true);
         currentPhase= AttackPhase.None;
+    }
+    private void ResolveLightHit()
+    {
+        Vector3 dir = attackDir.normalized;
+        Vector3 center =  transform.position+dir * hitDistance + Vector3.up * hitHeight;
+        Collider[] results = Physics.OverlapSphere(center,hitRadius,targetMask,QueryTriggerInteraction.Collide);
+        foreach(Collider collider in results)
+        {
+            HurtBox hurtBox = collider.GetComponent<HurtBox>();
+            if(!hurtBox)
+            {
+                Debug.LogError("Failed to get hurtbox.",this);
+                continue;
+            }
+            hurtBox.ReceiveHit(lightAttackDamage);
+        }
+
+
     }
 
 }
