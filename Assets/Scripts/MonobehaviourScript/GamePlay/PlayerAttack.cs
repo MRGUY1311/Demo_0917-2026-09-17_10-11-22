@@ -18,6 +18,7 @@ public class PlayerAttack : MonoBehaviour
     private PlayerMovement _playerMovement;
     private Animator _animator;
     private Vector3 attackDir;
+    private bool canAttack = true;
     private AttackPhase currentPhase = AttackPhase.None;
 
     [SerializeField]private float hitRadius;
@@ -35,34 +36,7 @@ public class PlayerAttack : MonoBehaviour
         }
     }
 
-    private bool TryInitialize()
-    {
-        if (!TryRequireComponent(out _player) ||
-            !TryRequireComponent(out _playerFacing) ||
-            !TryRequireComponent(out _playerAim) ||
-            !TryRequireComponent(out _playerMovement))
-        {
-            return false;
-        }
 
-        _animator = _player.GetAnimator();
-
-        if (_animator == null)
-        {
-            Debug.LogError("Require Animator.", this);
-            return false;
-        }
-
-        return true;
-    }
-    private bool TryRequireComponent<T>(out T component) where T : Component
-    {
-        if(TryGetComponent<T>(out component))
-            return true;
-        Debug.LogError($"Require {typeof(T).Name}.",this);
-        return false;
-    }
-    
     public void OnAttack(InputAction.CallbackContext context)
     {
         // Learning checkpoint: Invoke Unity Events can call this for Started, Performed, and Canceled.
@@ -76,8 +50,11 @@ public class PlayerAttack : MonoBehaviour
 
     private void StartAttack()
     {
+        if(!canAttack)
+            return;
         if(currentPhase != AttackPhase.None)
             return;
+        SetAttackAllowed(false);
         attackDir = _playerAim.mouseAim;
         _playerFacing.ChangeFacing(attackDir);
         _playerFacing.Lock();
@@ -122,5 +99,37 @@ public class PlayerAttack : MonoBehaviour
 
 
     }
+    public void SetAttackAllowed(bool state)
+    {
+        canAttack = state;
+    }
+        private bool TryInitialize()
+    {
+        if (!TryRequireComponent(out _player) ||
+            !TryRequireComponent(out _playerFacing) ||
+            !TryRequireComponent(out _playerAim) ||
+            !TryRequireComponent(out _playerMovement))
+        {
+            return false;
+        }
+
+        _animator = _player.GetAnimator();
+
+        if (_animator == null)
+        {
+            Debug.LogError("Require Animator.", this);
+            return false;
+        }
+
+        return true;
+    }
+    private bool TryRequireComponent<T>(out T component) where T : Component
+    {
+        if(TryGetComponent<T>(out component))
+            return true;
+        Debug.LogError($"Require {typeof(T).Name}.",this);
+        return false;
+    }
+    
 
 }

@@ -4,7 +4,7 @@ using UnityEngine;
 public class PlayerFacing : MonoBehaviour
 {
     private Player _player;
-    private Vector3 dir;
+    public Vector3 dir {get;private set;}
     private Vector3 pendingMoveDir;
     private bool canChangeFacing = true;
     void Awake()
