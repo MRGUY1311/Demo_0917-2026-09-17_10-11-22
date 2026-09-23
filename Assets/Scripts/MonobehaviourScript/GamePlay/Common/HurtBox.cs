@@ -7,21 +7,12 @@ public class HurtBox : MonoBehaviour
 
     void Awake()
     {
-        if(!TryRequireComponent<Health>(out _health))
+        if(!this.TryRequireComponent<Health>(out _health))
         {
             enabled = false;
             return;
         }
     }
-    private bool TryRequireComponent<T>(out T component)where T :Component
-    {
-        if(TryGetComponent<T>(out component))
-            return true;
-        Debug.LogError($"Require {typeof(T).Name}.",this);
-        return false;
-    }
-    
-
 
     public void ReceiveHit(float damage)
     {

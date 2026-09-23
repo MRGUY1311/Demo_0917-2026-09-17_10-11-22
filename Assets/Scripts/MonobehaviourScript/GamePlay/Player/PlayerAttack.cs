@@ -1,25 +1,15 @@
-using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.LowLevel;//used to simulate input
-public enum AttackPhase
-{
-    None,
-    Startup,
-    Active,
-    Recovery
-}
 public class PlayerAttack : MonoBehaviour
 {
     private Player _player;
     private PlayerFacing _playerFacing;
     private PlayerAim _playerAim;
     private PlayerMovement _playerMovement;
+    private PlayerActionState _playerActionState;
     private Animator _animator;
     private Vector3 attackDir;
-    private bool canAttack = true;
-    private AttackPhase currentPhase = AttackPhase.None;
 
     [SerializeField]private float hitRadius;
     [SerializeField]private float hitDistance;
@@ -41,7 +31,7 @@ public class PlayerAttack : MonoBehaviour
     {
         // Learning checkpoint: Invoke Unity Events can call this for Started, Performed, and Canceled.
         // We intentionally do not filter `context.performed` yet.
-        // Reproduce: hold the attack button until the attack ends, then release it. If currentPhase is None,
+        // Reproduce: hold the attack button until the attack ends, then release it. Once PlayerActionState is None,
         // the Canceled callback can start an unintended second attack. This also becomes a potential
         // "ghost input" when an Input Buffer is added.
         // Future fix: add `if (!context.performed) return;` before calling startAttack().
@@ -50,11 +40,8 @@ public class PlayerAttack : MonoBehaviour
 
     private void StartAttack()
     {
-        if(!canAttack)
+        if(!_playerActionState.TryBegin(PlayerAction.LightAttack))
             return;
-        if(currentPhase != AttackPhase.None)
-            return;
-        SetAttackAllowed(false);
         attackDir = _playerAim.mouseAim;
         _playerFacing.ChangeFacing(attackDir);
         _playerFacing.Lock();
@@ -62,24 +49,23 @@ public class PlayerAttack : MonoBehaviour
 
         StartCoroutine(Attacking());
     }
-    IEnumerator Attacking()
+    private IEnumerator Attacking()
     {
         _animator.SetTrigger("AttackLight");
-        currentPhase = AttackPhase.Startup;
         yield return new WaitForSeconds(0.333f);
-        currentPhase = AttackPhase.Active;
+        _playerActionState.SetPhase(PlayerAction.LightAttack, ActionPhase.Active);
         ResolveLightHit();
         yield return new WaitForSeconds(0.133f);
-        currentPhase = AttackPhase.Recovery;
-        
+        _playerActionState.SetPhase(PlayerAction.LightAttack, ActionPhase.Recover);
         yield return new WaitForSeconds(0.333f);
         EndAttack();
     }
     private void EndAttack()
     {
+        if(!_playerActionState.TryEnd(PlayerAction.LightAttack))
+            return;
         _playerFacing.UnLock();
         _playerMovement.SetMoveAllowed(true);
-        currentPhase= AttackPhase.None;
     }
     private void ResolveLightHit()
     {
@@ -99,16 +85,13 @@ public class PlayerAttack : MonoBehaviour
 
 
     }
-    public void SetAttackAllowed(bool state)
+    private bool TryInitialize()
     {
-        canAttack = state;
-    }
-        private bool TryInitialize()
-    {
-        if (!TryRequireComponent(out _player) ||
-            !TryRequireComponent(out _playerFacing) ||
-            !TryRequireComponent(out _playerAim) ||
-            !TryRequireComponent(out _playerMovement))
+        if (!this.TryRequireComponent(out _player) ||
+            !this.TryRequireComponent(out _playerFacing) ||
+            !this.TryRequireComponent(out _playerAim) ||
+            !this.TryRequireComponent(out _playerMovement)||
+            !this.TryRequireComponent(out _playerActionState))
         {
             return false;
         }
@@ -123,13 +106,4 @@ public class PlayerAttack : MonoBehaviour
 
         return true;
     }
-    private bool TryRequireComponent<T>(out T component) where T : Component
-    {
-        if(TryGetComponent<T>(out component))
-            return true;
-        Debug.LogError($"Require {typeof(T).Name}.",this);
-        return false;
-    }
-    
-
 }

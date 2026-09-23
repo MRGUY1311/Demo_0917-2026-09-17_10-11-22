@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -23,8 +22,8 @@ public class PlayerMovement : MonoBehaviour
     }
     private bool TryInitialize()
     {
-        if (!TryRequireComponent(out _player) ||
-            !TryRequireComponent(out _playerFacing))
+        if (!this.TryRequireComponent(out _player) ||
+            !this.TryRequireComponent(out _playerFacing))
         {
             return false;
         }
@@ -44,13 +43,6 @@ public class PlayerMovement : MonoBehaviour
         return true;
     }
 
-    private bool TryRequireComponent<T>(out T component) where T : Component
-    {
-        if(TryGetComponent<T>(out component))
-            return true;
-        Debug.LogError($"Require {typeof(T).Name}.",this);
-        return false;
-    }
     void Update()
     {
         Move();

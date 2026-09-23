@@ -1,13 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
-public enum DashState
-{
-    None,
-    Startup,
-    Active,
-    Recovery
-}
+
 public class Dash : MonoBehaviour
 {
     private CharacterController _characterController;
@@ -15,14 +9,10 @@ public class Dash : MonoBehaviour
     private PlayerMovement _playerMovement;
     private PlayerAim _playerAim;
     private PlayerFacing _playerFacing;
-    private PlayerAttack _playerAttack;
+    private PlayerActionState _playerActionState;
     private Animator _animator;
     [SerializeField]private bool isMouseAim = true;
-    private bool canDash = true;
-    private DashState currentState = DashState.None;
-    
     [SerializeField]private float dashDistance;
-    
     [SerializeField]private float dashDuration;
     private float dashVelocity;
 
@@ -44,11 +34,8 @@ public class Dash : MonoBehaviour
     }
     public void StartDash()
     {
-        if(!canDash)
+        if(!_playerActionState.TryBegin(PlayerAction.Dash))
             return;
-        if(currentState != DashState.None)
-            return;
-
         Vector3 dir = isMouseAim?_playerAim.mouseAim:_playerFacing.dir;
         if(dir == Vector3.zero)
         {
@@ -56,30 +43,25 @@ public class Dash : MonoBehaviour
             return;
         }
         _playerMovement.SetMoveAllowed(false);
-        _playerAttack.SetAttackAllowed(false);
-        SetDashAllowed(false);
+        _playerFacing.ChangeFacing(dir);
+
         StartCoroutine(Dashing(dir));
         StartCoroutine(MoveRoutine(dir));
     }
     private IEnumerator Dashing(Vector3 dir)
     {
-        _playerFacing.ChangeFacing(dir);
-        _animator.SetTrigger("Dash");                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
-        currentState = DashState.Startup;
-        yield return new WaitForSeconds(dashDuration/3); 
-        currentState = DashState.Active;
+        _animator.SetTrigger("Dash");
         yield return new WaitForSeconds(dashDuration/3);
-        currentState = DashState.Recovery;
+        _playerActionState.SetPhase(PlayerAction.Dash,ActionPhase.Active);
+        yield return new WaitForSeconds(dashDuration/3);
+        _playerActionState.SetPhase(PlayerAction.Dash,ActionPhase.Recover);
         yield return new WaitForSeconds(dashDuration/3);
         EndDash();
     }
     private void EndDash()
     {
-        currentState = DashState.None;
+        _playerActionState.TryEnd(PlayerAction.Dash);
         _playerMovement.SetMoveAllowed(true);
-        _playerAttack.SetAttackAllowed(true);
-        SetDashAllowed(true);
-        
     }
     private IEnumerator MoveRoutine(Vector3 dir)
     {
@@ -109,27 +91,15 @@ public class Dash : MonoBehaviour
     {
         StartDash();
     }
-    public void SetDashAllowed(bool state)
-    {
-        canDash = state;
-    }
-    private bool TryRequireComponent<T>(out T component)where T : Component
-    {
-        if(!TryGetComponent<T>(out component))
-        {
-            Debug.LogError($"Require {typeof(T).Name}.",this);
-            return false;
-        }
-        return true;
-    }
+
     private bool TryInitialize()
     {
-        if(!TryRequireComponent<CharacterController>(out _characterController)||
-            !TryRequireComponent<Player>(out _player)||
-            !TryRequireComponent<PlayerAim>(out _playerAim)||
-            !TryRequireComponent<PlayerMovement>(out _playerMovement)||
-            !TryRequireComponent<PlayerFacing>(out _playerFacing)||
-            !TryRequireComponent<PlayerAttack>(out _playerAttack)
+        if(!this.TryRequireComponent<CharacterController>(out _characterController)||
+            !this.TryRequireComponent<Player>(out _player)||
+            !this.TryRequireComponent<PlayerAim>(out _playerAim)||
+            !this.TryRequireComponent<PlayerMovement>(out _playerMovement)||
+            !this.TryRequireComponent<PlayerFacing>(out _playerFacing)||
+            !this.TryRequireComponent<PlayerActionState>(out _playerActionState)
         )
             return false;
         return true;
