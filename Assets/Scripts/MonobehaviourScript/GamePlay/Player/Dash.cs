@@ -6,7 +6,6 @@ public class Dash : MonoBehaviour
 {
     private CharacterController _characterController;
     private Player _player;
-    private PlayerMovement _playerMovement;
     private PlayerAim _playerAim;
     private PlayerFacing _playerFacing;
     private PlayerActionState _playerActionState;
@@ -34,15 +33,16 @@ public class Dash : MonoBehaviour
     }
     public void StartDash()
     {
-        if(!_playerActionState.TryBegin(PlayerAction.Dash))
-            return;
         Vector3 dir = isMouseAim?_playerAim.mouseAim:_playerFacing.dir;
         if(dir == Vector3.zero)
         {
             Debug.LogError("Dash:direction is zero.",this);
             return;
         }
-        _playerMovement.SetMoveAllowed(false);
+        if(!_playerActionState.TryBegin(PlayerAction.Dash))
+            return;
+        
+
         _playerFacing.ChangeFacing(dir);
 
         StartCoroutine(Dashing(dir));
@@ -61,7 +61,6 @@ public class Dash : MonoBehaviour
     private void EndDash()
     {
         _playerActionState.TryEnd(PlayerAction.Dash);
-        _playerMovement.SetMoveAllowed(true);
     }
     private IEnumerator MoveRoutine(Vector3 dir)
     {
@@ -97,7 +96,6 @@ public class Dash : MonoBehaviour
         if(!this.TryRequireComponent<CharacterController>(out _characterController)||
             !this.TryRequireComponent<Player>(out _player)||
             !this.TryRequireComponent<PlayerAim>(out _playerAim)||
-            !this.TryRequireComponent<PlayerMovement>(out _playerMovement)||
             !this.TryRequireComponent<PlayerFacing>(out _playerFacing)||
             !this.TryRequireComponent<PlayerActionState>(out _playerActionState)
         )

@@ -22,7 +22,7 @@ public class PlayerActionState : MonoBehaviour
         if(currentAction != PlayerAction.None)
             return false;
         currentAction = action;
-
+        currentPhase = ActionPhase.Startup;
         return true;
     }
     public bool SetPhase(PlayerAction owner,ActionPhase phase)
@@ -41,4 +41,8 @@ public class PlayerActionState : MonoBehaviour
         return true;
     }
 
+    public bool GetMoveAccess()
+    {
+        return currentPhase == ActionPhase.None;
+    }
 }

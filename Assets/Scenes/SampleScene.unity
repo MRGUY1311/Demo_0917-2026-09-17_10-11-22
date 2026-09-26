@@ -452,13 +452,13 @@ CharacterController:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Height: 2
+  m_Height: 1.8
   m_Radius: 0.5
   m_SlopeLimit: 45
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: 0.9, z: 0}
 --- !u!114 &165532898
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -508,13 +508,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 231837dfae6d2574daf00d558c73eb8e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttack
-  hitRadius: 2
-  hitDistance: 1
+  segments:
+  - startupDuration: 0.333
+    activeDuration: 0.133
+    recoveryDuration: 0.333
+    damage: 1
+    hitRadius: 2
+    hitDistance: 1
+  - startupDuration: 0.133
+    activeDuration: 0.2
+    recoveryDuration: 0.333
+    damage: 1
+    hitRadius: 2
+    hitDistance: 1
+  - startupDuration: 0.3
+    activeDuration: 0.1667
+    recoveryDuration: 0.2667
+    damage: 2
+    hitRadius: 2
+    hitDistance: 1
   hitHeight: 0.5
   targetMask:
     serializedVersion: 2
     m_Bits: 64
-  lightAttackDamage: 1
 --- !u!114 &165532902
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -527,9 +543,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24767ea513fcc5242be9fc72718424c5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  isMouseAim: 0
+  isMouseAim: 1
   dashDistance: 5
-  dashDuration: 1
+  dashDuration: 0.8
 --- !u!114 &165532903
 MonoBehaviour:
   m_ObjectHideFlags: 0
