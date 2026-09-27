@@ -70,17 +70,17 @@ public class PlayerAttack : MonoBehaviour
     }
 
     private IEnumerator Attacking(LightAttackStep step)
-    {         
+    {
         attackDir = _playerAim.mouseAim;
         _playerFacing.ChangeFacing(attackDir);
         _playerFacing.Lock();
 
         LightAttackSegment segment = segments[(int)step];
-
-        
-        inCombo = true;
+        if(step != LightAttackStep.A)
+            _playerActionState.SetPhase(PlayerAction.LightAttack,ActionPhase.Startup);
         yield return new WaitForSeconds(segment.startupDuration);
 
+        inCombo = true;
         _playerActionState.SetPhase(PlayerAction.LightAttack, ActionPhase.Active);
         ResolveLightHit(segment.damage,segment.hitRadius,segment.hitDistance);
         

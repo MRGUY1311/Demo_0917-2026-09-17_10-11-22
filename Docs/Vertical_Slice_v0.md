@@ -49,6 +49,9 @@
 - [ ] 四方向 / 任意方向 Dash
 - [ ] Dash i-frame
 - [ ] Dash 与攻击状态的取消规则
+- [ ] 新 Ability：Dash Attack
+  - [ ] 在 Dash 的指定阶段开放攻击窗口
+  - [ ] 进入独立 DashAttack Action / 动画状态，并明确位移与朝向规则
 - [ ] Dash 冷却或使用节奏
 - [ ] 比较 Root Motion 与程序位移的适用性
 
@@ -81,6 +84,12 @@
 - [ ] Hit Reaction
 - [ ] Death
 - [ ] Restart
+
+### 近期重构
+- [ ] 重构通用命中与攻击边界
+  - [ ] 提取 SphereHitbox / HitData / HurtBox 命中链路
+  - [ ] 保持各 Action 负责时序、动画与状态；Hitbox 只负责空间判定
+  - [ ] 第一版维持瞬时 Sphere Query，并保证一次判定内目标不会重复受击
 
 ### 时间与手感
 - [ ] Startup / Active / Recovery
