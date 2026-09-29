@@ -10,10 +10,12 @@ public class Dash : MonoBehaviour
     private PlayerFacing _playerFacing;
     private PlayerActionState _playerActionState;
     private Animator _animator;
+    [SerializeField]private AttackSegment dashAttack;
     [SerializeField]private bool isMouseAim = true;
     [SerializeField]private float dashDistance;
     [SerializeField]private float dashDuration;
     private float dashVelocity;
+    private bool canDashAttack;
 
     void Awake()
     {
@@ -52,10 +54,12 @@ public class Dash : MonoBehaviour
     {
         _animator.SetTrigger("Dash");
         yield return new WaitForSeconds(dashDuration/3);
+        OpenDashAttackWindow();
         _playerActionState.SetPhase(PlayerAction.Dash,ActionPhase.Active);
         yield return new WaitForSeconds(dashDuration/3);
         _playerActionState.SetPhase(PlayerAction.Dash,ActionPhase.Recover);
         yield return new WaitForSeconds(dashDuration/3);
+        CloseDashAttackWindow();
         EndDash();
     }
     private void EndDash()
@@ -88,9 +92,68 @@ public class Dash : MonoBehaviour
     }
     public void OnDash(InputAction.CallbackContext context)
     {
+        if(!context.performed)
+            return;
         StartDash();
     }
+    public void OnAttack(InputAction.CallbackContext context)
+    {
 
+        if(!canDashAttack)
+            return;
+        if(!context.performed)
+            return;
+        StartDashAttack();
+    }
+    private void StartDashAttack()
+    {
+        Vector3 dir = isMouseAim?_playerAim.mouseAim:_playerFacing.dir;
+        if(dir == Vector3.zero)
+        {
+            Debug.LogError("Dash:direction is zero.",this);
+            return;
+        }
+        CloseDashAttackWindow();
+        StopAllCoroutines();
+        EndDash();
+
+        if(!_playerActionState.TryBegin(PlayerAction.DashAttack))
+            return;
+
+        _animator.SetTrigger("DashAttack");
+        StartCoroutine(DashAttacking(dir));
+    }
+    private IEnumerator DashAttacking(Vector3 dir)
+    {
+        _playerFacing.ChangeFacing(dir);
+        _playerFacing.Lock();
+        yield return new WaitForSeconds(dashAttack.startupDuration);
+
+        _playerActionState.SetPhase(PlayerAction.DashAttack,ActionPhase.Active);
+        yield return new WaitForSeconds(dashAttack.activeDuration);
+
+        _playerActionState.SetPhase(PlayerAction.DashAttack,ActionPhase.Recover);
+        yield return new WaitForSeconds(dashAttack.recoveryDuration);
+        EndDashAttack();
+
+    }
+    private void OpenDashAttackWindow()
+    {
+        canDashAttack = true;
+    }
+    private void CloseDashAttackWindow()
+    {
+        canDashAttack = false;
+    }
+
+    private void EndDashAttack()
+    {
+        if(!_playerActionState.TryEnd(PlayerAction.DashAttack))
+        {
+            return;
+        }
+        _playerFacing.UnLock();
+    }
     private bool TryInitialize()
     {
         if(!this.TryRequireComponent<CharacterController>(out _characterController)||

@@ -90,6 +90,19 @@
   - [ ] 提取 SphereHitbox / HitData / HurtBox 命中链路
   - [ ] 保持各 Action 负责时序、动画与状态；Hitbox 只负责空间判定
   - [ ] 第一版维持瞬时 Sphere Query，并保证一次判定内目标不会重复受击
+- [ ] 收拢 Action 生命周期与派生规则
+  - [ ] PlayerActionState 暴露只读 CurrentAction / CurrentPhase
+  - [ ] 增加 Dash → DashAttack 的原子 TryTransition
+  - [ ] 统一完成与取消的清理路径，停止具体 Coroutine 而非 StopAllCoroutines
+  - [ ] 从 Action / Phase 或时间范围推导输入窗口，移除易遗留的窗口 bool
+  - [ ] 将 Attack 输入收成单一入口，明确派生动作优先级
+- [ ] 结构化共享阶段数据
+  - [ ] 提取 ActionTiming（Startup / Active / Recovery / TotalDuration）
+  - [ ] AttackSegment 与 DashSettings 组合 ActionTiming，移除 dashDuration / 3
+  - [ ] 将共享 AttackSegment 移出 PlayerAttack.cs
+- [ ] DashAttack 收尾
+  - [ ] Active 阶段调用共享 HitBox.ResolveHit
+  - [ ] 为错误 owner 的 SetPhase / TryEnd 增加可见诊断
 
 ### 时间与手感
 - [ ] Startup / Active / Recovery

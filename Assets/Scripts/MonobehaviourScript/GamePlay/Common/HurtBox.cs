@@ -16,7 +16,10 @@ public class HurtBox : MonoBehaviour
 
     public void ReceiveHit(float damage)
     {
-        Debug.Log("hit",this);
         _health.TakeDamage(damage);
+    }
+    public void ReceiveHit(HitData hitdata)
+    {
+        ReceiveHit(hitdata.damage);
     }
 }

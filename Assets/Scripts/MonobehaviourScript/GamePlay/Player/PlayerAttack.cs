@@ -2,6 +2,15 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+[System.Serializable]
+public struct AttackSegment
+{
+    public float startupDuration;
+    public float activeDuration;
+    public float recoveryDuration;
+
+    public HitData hitdata;
+}
 
 public class PlayerAttack : MonoBehaviour
 {
@@ -11,19 +20,10 @@ public class PlayerAttack : MonoBehaviour
         B,
         C
     }
-    [System.Serializable]
-    private struct LightAttackSegment
-    {
-        public float startupDuration;
-        public float activeDuration;
-        public float recoveryDuration;
 
-        public float damage;
-        public float hitRadius;
-        public float hitDistance;
-    }
-    [SerializeField] private LightAttackSegment[] segments = 
-    new LightAttackSegment[Enum.GetValues(typeof(LightAttackStep)).Length];
+
+    [SerializeField] private AttackSegment[] segments =
+    new AttackSegment[Enum.GetValues(typeof(LightAttackStep)).Length];
     private Player _player;
     private PlayerFacing _playerFacing;
     private PlayerAim _playerAim;
@@ -67,6 +67,7 @@ public class PlayerAttack : MonoBehaviour
         }
         _animator.SetTrigger("AttackLight");
         StartCoroutine(Attacking(LightAttackStep.A));
+
     }
 
     private IEnumerator Attacking(LightAttackStep step)
@@ -75,15 +76,15 @@ public class PlayerAttack : MonoBehaviour
         _playerFacing.ChangeFacing(attackDir);
         _playerFacing.Lock();
 
-        LightAttackSegment segment = segments[(int)step];
+        AttackSegment segment = segments[(int)step];
         if(step != LightAttackStep.A)
             _playerActionState.SetPhase(PlayerAction.LightAttack,ActionPhase.Startup);
         yield return new WaitForSeconds(segment.startupDuration);
 
         inCombo = true;
         _playerActionState.SetPhase(PlayerAction.LightAttack, ActionPhase.Active);
-        ResolveLightHit(segment.damage,segment.hitRadius,segment.hitDistance);
-        
+
+        HitBox.ResolveHit(segment.hitdata,transform.position,attackDir);
         yield return new WaitForSeconds(segment.activeDuration);
 
         _playerActionState.SetPhase(PlayerAction.LightAttack, ActionPhase.Recover);
@@ -113,22 +114,7 @@ public class PlayerAttack : MonoBehaviour
         _playerFacing.UnLock();
     }
 
-    private void ResolveLightHit(float damage,float hitRadius,float hitDistance)
-    {
-        Vector3 dir = attackDir.normalized;
-        Vector3 center =  transform.position+dir * hitDistance + Vector3.up * hitHeight;
-        Collider[] results = Physics.OverlapSphere(center,hitRadius,targetMask,QueryTriggerInteraction.Collide);
-        foreach(Collider collider in results)
-        {
-            HurtBox hurtBox = collider.GetComponent<HurtBox>();
-            if(!hurtBox)
-            {
-                Debug.LogError("Failed to get hurtbox.",this);
-                continue;
-            }
-            hurtBox.ReceiveHit(damage);
-        }
-    }
+
     private bool TryInitialize()
     {
         if (!this.TryRequireComponent(out _player) ||

@@ -3,7 +3,8 @@ public enum PlayerAction
 {
     None,
     LightAttack,
-    Dash
+    Dash,
+    DashAttack
 }
 public enum ActionPhase
 {
@@ -20,7 +21,10 @@ public class PlayerActionState : MonoBehaviour
     public bool TryBegin(PlayerAction action)
     {
         if(currentAction != PlayerAction.None)
+        {
+            Debug.LogWarning($"PlayerActionState:current action is {currentAction.ToString()}.",this);
             return false;
+        }
         currentAction = action;
         currentPhase = ActionPhase.Startup;
         return true;
@@ -36,8 +40,10 @@ public class PlayerActionState : MonoBehaviour
     {
         if(owner!=currentAction)
             return false;
+        Debug.Log($"PlayerActionState:sucessfully end action,last action is {currentAction.ToString()}.",this);
         currentAction = PlayerAction.None;
         currentPhase = ActionPhase.None;
+
         return true;
     }
 
