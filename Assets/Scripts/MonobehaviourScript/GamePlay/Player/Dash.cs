@@ -1,6 +1,8 @@
 using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityPipeline.Microsoft.CodeAnalysis.CSharp.Syntax;
 
 public class Dash : MonoBehaviour
 {
@@ -15,7 +17,9 @@ public class Dash : MonoBehaviour
     [SerializeField]private float dashDistance;
     [SerializeField]private float dashDuration;
     private float dashVelocity;
-    private bool canDashAttack;
+    private Coroutine moveRoutine;
+    private Coroutine dashingRoutine;
+    private Coroutine startDashAttackRoutine;
 
     void Awake()
     {
@@ -47,24 +51,31 @@ public class Dash : MonoBehaviour
 
         _playerFacing.ChangeFacing(dir);
 
-        StartCoroutine(Dashing(dir));
-        StartCoroutine(MoveRoutine(dir));
+        dashingRoutine = StartCoroutine(Dashing(dir));
+        moveRoutine = StartCoroutine(MoveRoutine(dir));
     }
     private IEnumerator Dashing(Vector3 dir)
     {
         _animator.SetTrigger("Dash");
         yield return new WaitForSeconds(dashDuration/3);
-        OpenDashAttackWindow();
+
+
         _playerActionState.SetPhase(PlayerAction.Dash,ActionPhase.Active);
         yield return new WaitForSeconds(dashDuration/3);
         _playerActionState.SetPhase(PlayerAction.Dash,ActionPhase.Recover);
         yield return new WaitForSeconds(dashDuration/3);
-        CloseDashAttackWindow();
+
+        dashingRoutine = null;
         EndDash();
     }
     private void EndDash()
     {
         _playerActionState.TryEnd(PlayerAction.Dash);
+        if(_animator.GetBool("PendingDashAttack"))
+        {
+            StartDashAttack();
+        }
+
     }
     private IEnumerator MoveRoutine(Vector3 dir)
     {
@@ -89,6 +100,7 @@ public class Dash : MonoBehaviour
 
             yield return null;
         }
+        moveRoutine = null;
     }
     public void OnDash(InputAction.CallbackContext context)
     {
@@ -98,30 +110,47 @@ public class Dash : MonoBehaviour
     }
     public void OnAttack(InputAction.CallbackContext context)
     {
+        bool canDashAttack = (_playerActionState.currentAction == PlayerAction.Dash&&(
+            _playerActionState.currentPhase != ActionPhase.None
+        )&&!_animator.GetBool("PendingDashAttack"));
 
         if(!canDashAttack)
             return;
+
         if(!context.performed)
             return;
-        StartDashAttack();
+        _animator.SetBool("PendingDashAttack",true);
+        //StartDashAttack();//muti invoke
     }
     private void StartDashAttack()
     {
+        Debug.Log("Dash: start dash",this);
         Vector3 dir = isMouseAim?_playerAim.mouseAim:_playerFacing.dir;
         if(dir == Vector3.zero)
         {
             Debug.LogError("Dash:direction is zero.",this);
             return;
         }
-        CloseDashAttackWindow();
-        StopAllCoroutines();
-        EndDash();
+        // StopCoroutine(dashingRoutine);
+        // StopCoroutine(moveRoutine);
+        // EndDash();
+        /*animator and Coroutine are out of sync,
+        what really needed is invoke dash attack after dash clip.
+        For now, transition of Dash to DashAttack 's has exit time is true,
+        it matches we need.*/
+        // yield return new WaitUntil(()=> _playerActionState.currentAction==PlayerAction.None&&
+        //  _playerActionState.currentPhase == ActionPhase.None);//trigger is gave after dash transitioned to locomotion
+
+
+        //_animator.SetBool("PendingDashAttack",true); //OnAttack proves start is legal,so we can write PendingDashAttack
+
 
         if(!_playerActionState.TryBegin(PlayerAction.DashAttack))
             return;
 
-        _animator.SetTrigger("DashAttack");
+        //_animator.SetTrigger("DashAttack");
         StartCoroutine(DashAttacking(dir));
+
     }
     private IEnumerator DashAttacking(Vector3 dir)
     {
@@ -129,25 +158,21 @@ public class Dash : MonoBehaviour
         _playerFacing.Lock();
         yield return new WaitForSeconds(dashAttack.startupDuration);
 
+        HitBox.ResolveHit(dashAttack,transform.position,dir);
         _playerActionState.SetPhase(PlayerAction.DashAttack,ActionPhase.Active);
         yield return new WaitForSeconds(dashAttack.activeDuration);
 
         _playerActionState.SetPhase(PlayerAction.DashAttack,ActionPhase.Recover);
         yield return new WaitForSeconds(dashAttack.recoveryDuration);
+        startDashAttackRoutine = null;
         EndDashAttack();
 
     }
-    private void OpenDashAttackWindow()
-    {
-        canDashAttack = true;
-    }
-    private void CloseDashAttackWindow()
-    {
-        canDashAttack = false;
-    }
+
 
     private void EndDashAttack()
     {
+        _animator.SetBool("PendingDashAttack",false);
         if(!_playerActionState.TryEnd(PlayerAction.DashAttack))
         {
             return;

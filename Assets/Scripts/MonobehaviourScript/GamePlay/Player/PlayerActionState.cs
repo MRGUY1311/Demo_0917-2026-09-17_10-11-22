@@ -16,8 +16,8 @@ public enum ActionPhase
 
 public class PlayerActionState : MonoBehaviour
 {
-    private ActionPhase currentPhase = ActionPhase.None;
-    private PlayerAction currentAction = PlayerAction.None;
+    public ActionPhase currentPhase {get;private set;}= ActionPhase.None;
+    public PlayerAction currentAction {get;private set;}= PlayerAction.None;
     public bool TryBegin(PlayerAction action)
     {
         if(currentAction != PlayerAction.None)

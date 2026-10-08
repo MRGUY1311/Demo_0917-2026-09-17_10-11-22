@@ -25,5 +25,8 @@ public class HitBox : MonoBehaviour
             hurtBox.ReceiveHit(hitdata);
         }
     }
-
+    public static void ResolveHit(AttackSegment segment,Vector3 position,Vector3 dir)
+    {
+        ResolveHit(segment.hitdata,position,dir);
+    }
 }

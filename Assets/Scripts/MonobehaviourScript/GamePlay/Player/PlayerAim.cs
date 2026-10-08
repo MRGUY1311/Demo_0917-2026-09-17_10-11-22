@@ -30,8 +30,9 @@ public class PlayerAim : MonoBehaviour
         Vector3 point = ray.GetPoint(distance);
         Vector3 aim = point - transform.position;
         aim.y = 0f;
+
         
-        mouseAim = aim==Vector3.zero?transform.forward:aim;
+        mouseAim = aim==Vector3.zero?transform.forward:aim.normalized;
 
     }
 
