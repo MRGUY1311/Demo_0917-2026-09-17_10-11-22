@@ -1,0 +1,33 @@
+RequestAttack(){
+    if(!context.performed)
+    {
+        Func<action,phase,Action> analysis = (action,phase)=>{...};
+        result = analysis(currentAction,currentPhase);
+        result();
+    }
+}
+TryPend(action){
+    if(canPend)
+        pendAction = action;
+}
+TryEnd(action){
+    if(canEnd)
+        action.Exit();
+    TryBegin(pendAction);
+}
+TryBegin(action){
+    if(canBegin)
+    {
+        action.Enter();
+
+        TrySetPhase(action,phase00);
+        action.OnPhaseEnter(phase00);
+
+        ...(action,phase01);
+        action.Tick();
+        ...(phase01);
+
+        ...(action,phase02);
+        ...(phase02);
+    }
+}

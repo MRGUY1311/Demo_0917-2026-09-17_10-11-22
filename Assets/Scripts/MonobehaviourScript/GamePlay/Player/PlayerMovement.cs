@@ -6,7 +6,7 @@ public class PlayerMovement : MonoBehaviour
     private CharacterController _controller;
     private Player _player;
     private PlayerFacing _playerFacing;
-    private PlayerActionState _playerActionState;
+    private PlayerActionController _playerActionController;
     private Camera referenceCamera;
     private Animator _animator;
 
@@ -25,7 +25,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!this.TryRequireComponent(out _player) ||
             !this.TryRequireComponent(out _playerFacing)||
-            !this.TryRequireComponent(out _playerActionState))
+            !this.TryRequireComponent(out _playerActionController))
         {
             return false;
         }
@@ -64,7 +64,7 @@ public class PlayerMovement : MonoBehaviour
 
         moveAmount = dir.magnitude;
 
-        if(_playerActionState.GetMoveAccess())
+        if(_playerActionController.GetMoveAccess())
         {
             _playerFacing.ChangeFacing(worldMoveDir);
             if(worldMoveDir.sqrMagnitude > 1)

@@ -335,20 +335,8 @@ MonoBehaviour:
     m_ActionName: 'Player/Look[/Mouse/delta,/Touchscreen/delta,/Pen/delta]'
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 165532901}
-        m_TargetAssemblyTypeName: PlayerAttack, Assembly-CSharp
-        m_MethodName: OnAttack
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 165532902}
-        m_TargetAssemblyTypeName: Dash, Assembly-CSharp
+      - m_Target: {fileID: 165532903}
+        m_TargetAssemblyTypeName: PlayerActionController, Assembly-CSharp
         m_MethodName: OnAttack
         m_Mode: 0
         m_Arguments:
@@ -427,8 +415,8 @@ MonoBehaviour:
     m_ActionName: UI/TrackedDeviceOrientation
   - m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 165532902}
-        m_TargetAssemblyTypeName: Dash, Assembly-CSharp
+      - m_Target: {fileID: 165532903}
+        m_TargetAssemblyTypeName: PlayerActionController, Assembly-CSharp
         m_MethodName: OnDash
         m_Mode: 0
         m_Arguments:
@@ -521,9 +509,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAttack
   segments:
-  - startupDuration: 0.333
-    activeDuration: 0.133
-    recoveryDuration: 0.333
+  - timing:
+      startupDuration: 0.333
+      activeDuration: 0.133
+      recoveryDuration: 0.333
     hitdata:
       damage: 1
       radius: 2
@@ -532,9 +521,10 @@ MonoBehaviour:
       targetMask:
         serializedVersion: 2
         m_Bits: 64
-  - startupDuration: 0.133
-    activeDuration: 0.2
-    recoveryDuration: 0.333
+  - timing:
+      startupDuration: 0.133
+      activeDuration: 0.2
+      recoveryDuration: 0.333
     hitdata:
       damage: 1
       radius: 2
@@ -543,9 +533,10 @@ MonoBehaviour:
       targetMask:
         serializedVersion: 2
         m_Bits: 64
-  - startupDuration: 0.3
-    activeDuration: 0.1667
-    recoveryDuration: 0.2667
+  - timing:
+      startupDuration: 0.3
+      activeDuration: 0.1667
+      recoveryDuration: 0.2667
     hitdata:
       damage: 2
       radius: 2
@@ -571,9 +562,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   dashAttack:
-    startupDuration: 0.133
-    activeDuration: 0.2
-    recoveryDuration: 0.133
+    timing:
+      startupDuration: 0.133
+      activeDuration: 0.2
+      recoveryDuration: 0.133
     hitdata:
       damage: 1
       radius: 2
@@ -583,8 +575,12 @@ MonoBehaviour:
         serializedVersion: 2
         m_Bits: 64
   isMouseAim: 1
-  dashDistance: 5
-  dashDuration: 0.8
+  dashSettings:
+    distance: 5
+    timing:
+      startupDuration: 0.26666668
+      activeDuration: 0.26666668
+      recoveryDuration: 0.26666668
 --- !u!114 &165532903
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -594,9 +590,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 165532893}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 49323690062e8944fae76c5a19eaafcc, type: 3}
+  m_Script: {fileID: 11500000, guid: 013c71b8b3ea68c469ad7f7000e640dc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerActionState
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerActionController
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
