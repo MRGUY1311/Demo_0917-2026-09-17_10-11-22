@@ -7,7 +7,7 @@
 
 ## 清单使用与阶段安排
 
-最近核对：2026-10-08，依据提交前基线 `c96188e` 及当日保存的代码、配置。进度包含用户反馈的 DashAttack 命中接入与预约衔接效果；本次收尾没有由助手重新进行 Play 或构建验收。
+最近核对：2026-10-11，依据提交基线 `97645df` 及 10/09–10/11 保存的代码、配置。当前为动作管理器迁移检查点：用户反馈 Locomotion ↔ Dash 验收通过，LightAttack 为零时长占位，DashAttack 请求暂时屏蔽。历史勾选保留迁移前已成立的成果，不代表新链路全部回归；本次收尾没有由助手进行 Play 或构建验收。
 
 - `[x]`：该事项描述的最小版本已经成立；后续手感与稳定性验收仍可发现问题。
 - `[ ]`：尚未完成；注明“部分完成”的事项保留已有成果与剩余缺口。
@@ -74,6 +74,7 @@
 - [x] 任意方向程序位移 Dash，使用 Roll 动画表现
 - [x] Dash 与 Attack 输入仅响应 performed
 - [ ] Dash i-frame
+- [ ] 修复抵着 Cube 翻滚时偶发沿墙缓慢位移，翻滚结束后仍持续滑动一段时间（2026-10-09 已定位为 MoveRoutine；新版 Tick 已接入侧碰停止，贴墙回归待确认）
 - [ ] Dash 与攻击状态的取消规则（当前 DashAttack 为预约后衔接，不在按键时取消 Dash；统一交接与清理待完成）
 - [x] Dash Attack 最小版本：Dash 期间预约，程序 Dash 结束后起手并接入伤害；动画与计时边界仍待专门验收
   - [x] 为测试在 Dash 的 Startup / Active / Recover 阶段开放输入窗口
@@ -121,14 +122,16 @@
   - [ ] 第一版维持瞬时 Sphere Query，并保证一次判定内目标不会重复受击
 - [ ] 收拢 Action 生命周期与派生规则
   - [x] PlayerActionState 暴露只读 currentAction / currentPhase
+  - [x] PlayerActionController 接管普通 Dash，输入与 Movement 使用同一权限来源（2026-10-11 用户反馈 Locomotion ↔ Dash 验收通过）
+  - [ ] 将 LightAttack 与 DashAttack 迁入完整行为生命周期，恢复并验收派生请求
   - [ ] 增加 Dash → DashAttack 的原子 TryTransition
   - [ ] 统一完成与取消的清理路径，停止具体 Coroutine 而非 StopAllCoroutines
   - [x] DashAttack 输入许可由 Action / Phase 推导，移除 canDashAttack 字段；PendingDashAttack 保留为请求缓存而非权限
   - [ ] 将 Attack 输入收成单一入口，明确派生动作优先级
-- [ ] 结构化共享阶段数据
-  - [ ] 提取 ActionTiming（Startup / Active / Recovery / TotalDuration）
-  - [ ] AttackSegment 与 DashSettings 组合 ActionTiming，移除 dashDuration / 3
-  - [ ] 将共享 AttackSegment 移出 PlayerAttack.cs
+- [x] 结构化共享阶段数据（实现与存量参数迁移完成，待 Play 回归）
+  - [x] 提取 ActionTiming（Startup / Active / Recovery / TotalDuration）
+  - [x] AttackSegment 与 DashSettings 组合 ActionTiming，移除 dashDuration / 3
+  - [x] 将共享 AttackSegment 移出 PlayerAttack.cs
 - [ ] DashAttack 收尾
   - [x] Recovery 的 owner 修正为 DashAttack
   - [x] Active 入口调用共享 HitBox.ResolveHit，增加 AttackSegment 转交 HitData 的重载
@@ -355,6 +358,34 @@ v0 不要求“工业化”或作品集级包装，只要求形成完整的自�
 - 原因：立即停止协程会造成翻滚中停位移与转向；延后发送旧 Trigger 又可能错过 Dash 的过渡并残留到下一次。
 - 结果：用户反馈当前衔接效果尚可，保留调试注释与自然迭代痕迹；失败清理、动画 / 程序时序、窗口末端和碰墙场景仍列入后续验收，不视为完整回归已通过。
 - 安排：新增双项目共用日程与 Obsidian 同步副本；v0 与 Gameplay 打磨目标为 11/15，最晚目标为 11/30，工业化回顾单独排期。
+
+### 2026-10-09
+
+- Bug 记录：抵着 Cube 翻滚时，有概率在翻滚中沿墙缓慢位移；翻滚结束后仍持续上述位移一段时间。暂未确认是否伴随持续 WASD 输入、具体入射角及 DashAttack 预约。
+- 静态定位线索：Dash 的状态协程按时长结束，MoveRoutine 却按实际累计位移达到 dashDistance 才结束；贴墙后若每帧仍有大于停止阈值的小位移，位移协程可能超过 Dash 的时长继续运行，EndDash 当前也未停止它。
+- 待验证：松开 WASD 后复现，核对残余位移时的 Action / Phase 及 MoveRoutine 是否仍在调用 Move；比较正面抵墙、斜向擦墙及有 / 无 DashAttack 预约。
+- 原始记录状态：仅记录用户现象与未运行确认的原因假设，没有修改 Dash / Movement 脚本。
+- 后续定位：用户确认是 MoveRoutine 的问题；当前用户代码已加入 CollisionFlags.Sides 碰撞退出与 EndDash 停止位移协程。本次提取完整保留这部分改动，尚未收到修改后的 Play 回归结果。
+- 数据提取：新增独立 ActionTiming、AttackSegment、DashSettings；轻攻击 A/B/C 与 DashAttack 改为读取 timing，Dash 不再通过总时长三等分推进阶段。它们仍是内联序列化数据，不负责动作执行或状态管理。
+- 参数迁移：SampleScene 中四段攻击的阶段时长及 HitData 原样保留；Dash 距离保留 5，原总时长 0.8 的三等分结果各迁移为 0.26666668。逐项静态比对通过，未编译或进行 Play 验收。
+- 设计决定：按用户要求暂不补齐局部 fallback；离散的动作派生、生命周期管理与角色方向写入留到后续设计讨论，本次没有改动这些行为。
+
+### 2026-10-10
+
+- 变更：用户继续实现 PlayerActionController，新增空请求 / 空时长常量、退出原因、统一退出清理及阶段入口调用；Dash.GetTiming 已返回现有普通 Dash 参数，接口 Exit 已带退出原因。
+- 当前状态：其他动作行为入口仍有 NotImplementedException；CanEnd 为占位实现，CanBegin 尚未检查动作占用，组件引用初始化与新旧链路接线仍待完成。不将此草稿视为可运行迁移已验收。
+- 明早先核对：activeEnd 应使用 Startup + Active 的累计边界；拒绝决策已移到 ActionDecision，但 AnalyzeAttack 仍使用未限定的 rejection。助手只记录静态检查线索，没有改脚本或编译。
+- 下一次执行节点：新控制器独立驱动普通 Dash，正常或碰墙后按阶段结束，恢复移动且可再次 Dash；优先补权限与行为入口，再接通输入和 Movement 的同一权限来源。
+- 范围与时间：用户计划 10/11 上午至午餐前继续，不自动扩展到下午 / 晚间；暂不迁移完整 DashAttack、轻攻击连段或重做动画 / Facing。
+
+### 2026-10-11
+
+- 变更：新增 IPlayerActionBehavior 与动作请求 / 决策结构；PlayerActionController 负责请求分析、单槽预约、阶段计时和退出清理，初始化复用 TryRequireComponent。Dash 通过 Enter 保存执行请求，通过阶段入口驱动动画，通过 Tick 执行程序位移并在侧碰后停止位移。
+- 接线：Movement 改为查询 PlayerActionController.GetMoveAccess；保存的 SampleScene 将 Attack / Dash 事件汇总到管理器，玩家节点改挂新管理器，存量攻击与 Dash 的阶段参数沿用原值。保留 Dash_、旧状态脚本与早期伪代码作为迁移参考。
+- 占位：PlayerAttack 的 GetTiming 返回 ActionTiming.Empty，其余行为接口为空，旧输入入口暂不启动攻击协程；管理器暂时忽略 Dash / DashAttack 期间的攻击输入，避免普通 Dash 验收触发未完成派生。暂时不播放轻攻击动画、转向或造成命中。
+- 验收：用户反馈 Locomotion ↔ Dash 没有问题；未据此标记两种方向的全部边界、贴墙、攻击派生或完整战斗回归已通过。助手本次没有进行 Play 或构建验收。
+- 未完成：Dash → DashAttack 尚不能执行；已有一个明确阻断是 OnAttack 中的临时保护。保存版本还保留 activeEnd 累计边界、CanBegin 忙碌检查、CanPend 条件括号、方向归一化及 derive 退出清理等迁移缺口，不在提交时顺手改动。
+- 下次入口：2026-10-12 中午先恢复 DashAttack 请求入口，再检查请求缓存、动作交接与动画 / 判定衔接；LightAttack 继续占位。今天到此收工。
 
 ### YYYY-MM-DD
 - 变更：
