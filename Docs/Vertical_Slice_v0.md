@@ -7,7 +7,7 @@
 
 ## 清单使用与阶段安排
 
-最近核对：2026-10-11，依据提交基线 `97645df` 及 10/09–10/11 保存的代码、配置。当前为动作管理器迁移检查点：用户反馈 Locomotion ↔ Dash 验收通过，LightAttack 为零时长占位，DashAttack 请求暂时屏蔽。历史勾选保留迁移前已成立的成果，不代表新链路全部回归；本次收尾没有由助手进行 Play 或构建验收。
+最近核对：2026-10-13，依据提交基线 `1934f2a` 及当前保存的代码、配置。用户于 10/12 反馈 Dash → DashAttack 接通并验收通过，10/13 10:16 反馈 LightAttack 链路接通、测试暂未发现问题。新管理器已驱动 Dash、DashAttack 与轻连段；助手静态审查未发现当时 A/B/C 可达路径的阻断问题。提交前另发现新保存的 CanBegin 占用判断写反，经用户授权仅修正这一行；该修正尚未收到新的 Play 验收。历史勾选与本轮基础验收不代表全部边界已覆盖，助手没有编译、Play 或构建。
 
 - `[x]`：该事项描述的最小版本已经成立；后续手感与稳定性验收仍可发现问题。
 - `[ ]`：尚未完成；注明“部分完成”的事项保留已有成果与剩余缺口。
@@ -39,7 +39,7 @@
 - [x] Movement 与 Facing 解耦，PlayerFacing 为角色旋转的唯一写入者
 - [x] Dash 保留 Mouse Aim / Facing 两种方向模式
 - [x] 攻击开始时采样攻击方向
-- [x] 当前攻击通过 Facing Lock 保留方向 commitment
+- [x] 当前攻击保留方向 commitment；新版动作期间 Movement 不改 Facing，攻击脚本不再自行 Lock / UnLock
 - [x] 俯视角相机平滑跟随
 
 > 原方案“持续鼠标 Facing、Dash 优先 Move Input”已发生迭代。当前非攻击 Facing 跟随 Move；Dash 的 Facing 模式不等同于直接采样当前 Move Input。
@@ -66,7 +66,7 @@
 - [x] Attack Startup / Active / Recovery
 - [x] Locomotion Blend Tree 与轻击返回路径
 - [ ] 按实际手感决定跨 Action 的输入缓存、过期和消费规则
-- [ ] 明确轻攻击的转向政策：当前每段起手采样并锁向，持续转向尚未实现
+- [ ] 明确轻攻击的转向政策：当前每段使用请求中保存的方向，持续转向尚未实现
 - [ ] 挥空与命中后的手感对比（在 Gameplay 打磨阶段验收）
 
 ### Dash
@@ -78,9 +78,9 @@
 - [ ] Dash 与攻击状态的取消规则（当前 DashAttack 为预约后衔接，不在按键时取消 Dash；统一交接与清理待完成）
 - [x] Dash Attack 最小版本：Dash 期间预约，程序 Dash 结束后起手并接入伤害；动画与计时边界仍待专门验收
   - [x] 为测试在 Dash 的 Startup / Active / Recover 阶段开放输入窗口
-  - [x] PendingDashAttack bool 缓存一次请求，Animator 使用该参数区分攻击与返回 Locomotion 的分支
-  - [x] 不在按键时停止 Dash 位移；程序 Dash 结束后进入独立 DashAttack Action，起手采样方向并锁定 Facing
-  - [x] Active 入口调用共享命中，正常结束恢复移动与 Facing，并清除 PendingDashAttack
+  - [x] Controller.pendingRequest 缓存一次请求，PendingDashAttack bool 供 Animator 区分攻击与返回 Locomotion 的分支
+  - [x] 不在按键时停止 Dash 位移；程序 Dash 结束后进入独立 DashAttack Action，使用缓存请求的方向
+  - [x] Active 入口调用共享命中，正常结束释放移动权限并清除 PendingDashAttack；新版不再由行为脚本管理 Facing Lock
 - [ ] 根据战斗体验决定 Dash 冷却或使用节奏
 - [ ] 比较 Root Motion 与程序位移的适用性（学习候选，当前使用程序位移）
 
@@ -118,16 +118,16 @@
 ### 近期重构
 - [ ] 重构通用命中与攻击边界
   - [x] 提取 HitBox / HitData / HurtBox 命中链路
-  - [x] 保持各 Action 负责时序、动画与状态；Hitbox 只负责空间判定与命中转交
+  - [x] Controller 负责阶段时序与调度，各 Action 行为处理动画和命中入口；Hitbox 只负责空间判定与命中转交
   - [ ] 第一版维持瞬时 Sphere Query，并保证一次判定内目标不会重复受击
 - [ ] 收拢 Action 生命周期与派生规则
-  - [x] PlayerActionState 暴露只读 currentAction / currentPhase
+  - [x] Action / Phase 对外只读；旧 PlayerActionState 已由 PlayerActionController 替代并移除
   - [x] PlayerActionController 接管普通 Dash，输入与 Movement 使用同一权限来源（2026-10-11 用户反馈 Locomotion ↔ Dash 验收通过）
-  - [ ] 将 LightAttack 与 DashAttack 迁入完整行为生命周期，恢复并验收派生请求
-  - [ ] 增加 Dash → DashAttack 的原子 TryTransition
-  - [ ] 统一完成与取消的清理路径，停止具体 Coroutine 而非 StopAllCoroutines
-  - [x] DashAttack 输入许可由 Action / Phase 推导，移除 canDashAttack 字段；PendingDashAttack 保留为请求缓存而非权限
-  - [ ] 将 Attack 输入收成单一入口，明确派生动作优先级
+  - [x] 将 LightAttack 与 DashAttack 迁入行为生命周期，恢复派生请求；10/12 DashAttack、10/13 LightAttack 用户反馈基础验收通过
+  - [x] Dash → DashAttack 统一交接：Controller 捕获预约、执行退出清理，再开始下一动作；沿用现有 TryEnd / TryBegin，不新增 TryTransition 入口
+  - [ ] 统一完成与取消的清理路径；当前正常结束已有共享入口，取消、受击、死亡 / Restart 尚未接入
+  - [x] DashAttack 输入许可由 Action / Phase 推导，移除 canDashAttack 字段；Controller.pendingRequest 是唯一 Gameplay 预约，PendingDashAttack 是 Animator 分支参数
+  - [x] Attack 输入收成 Controller.OnAttack 单一入口，按当前 Action / Phase 解析；当前没有多种派生同时竞争
 - [x] 结构化共享阶段数据（实现与存量参数迁移完成，待 Play 回归）
   - [x] 提取 ActionTiming（Startup / Active / Recovery / TotalDuration）
   - [x] AttackSegment 与 DashSettings 组合 ActionTiming，移除 dashDuration / 3
@@ -147,7 +147,7 @@
 - [ ] Cancel Window 与派生优先级验收
 - [ ] Hitstop
 - [ ] i-frame
-- [x] 起手方向采样与攻击期间锁向
+- [x] 攻击请求方向采样与攻击期间保留方向；连段方向使用预约时保存的输入，持续转向未实现
 - [ ] 根据不同 Action 调整 Attack Commitment
 
 ## 5. Boss
@@ -386,6 +386,25 @@ v0 不要求“工业化”或作品集级包装，只要求形成完整的自�
 - 验收：用户反馈 Locomotion ↔ Dash 没有问题；未据此标记两种方向的全部边界、贴墙、攻击派生或完整战斗回归已通过。助手本次没有进行 Play 或构建验收。
 - 未完成：Dash → DashAttack 尚不能执行；已有一个明确阻断是 OnAttack 中的临时保护。保存版本还保留 activeEnd 累计边界、CanBegin 忙碌检查、CanPend 条件括号、方向归一化及 derive 退出清理等迁移缺口，不在提交时顺手改动。
 - 下次入口：2026-10-12 中午先恢复 DashAttack 请求入口，再检查请求缓存、动作交接与动画 / 判定衔接；LightAttack 继续占位。今天到此收工。
+
+### 2026-10-12：PlayerAttack 迁移设计约束（已确认）
+
+- 最核心原则：PlayerActionController 是唯一动作调度中心；动作开始、阶段推进、结束、pending 消费与下一动作接续统一由它落实。
+- 当前选择：在 PlayerAttack 中实现连段规则查询与行为执行。规则查询只读取所需上下文并返回结果，**不启动动作、不修改阶段、不递增执行中的段号**；局部执行 / 连段数据可以保存在动作模块中，但查询不能提前提交执行状态。
+- 审查依据：检查查询是否具有上述副作用，是否绕过 Controller 自行启动下一段，是否另外建立一套阶段计时或输入缓存来与 Controller 竞争调度。查询产生接续结果，与真正执行下一段是两个不同步骤。
+- 保留现状：Dash / DashAttack 的解析目前仍在 Controller；动作规则解析的最终归属是另一个待讨论的话题，不因本次选择强制迁移已实现的 Dash 链路，也不把规则所在文件本身作为设计违规依据。
+- 迭代方式：先实践 PlayerAttack，再根据实际摩擦判断后续方向；本次不预先锁定请求字段、连段状态的数据形式或是否拆出独立规则类。本记录用于后续审查校验，不代表 PlayerAttack 已实现或验收。
+- 本次范围：只记录已确认原则，没有修改脚本、编译、运行验收或提交。
+
+### 2026-10-13：轻连段迁移与提交检查点
+
+- 用户验收：10/12 Dash → DashAttack 链路接通并反馈验收通过；10/13 10:16 LightAttack 链路接通，测试暂未发现问题。不据此宣称所有动画 / 命中帧、取消、死亡与 Restart 边界已验收。
+- 实现：PlayerAttack 通过行为接口接入动画、转向请求与共享命中；InCombo 查询只返回结果，连段步数在 Controller 调用的 Exit(derive) 中推进，随后查询下一段 Timing。A/B 可预约一段，C 拒绝接续，正常结束重置为 A。
+- 调度：移除旧动作开始重载，SetPhase / TryEnd 改为私有，恢复 DashAttack 请求入口，activeEnd 改为 Startup + Active 的累计边界。旧 Dash_ / PlayerActionState 及其 meta 由用户移除，版本历史仍保留旧实现。
+- 审查：当时可达 A/B/C 路径未发现阻断问题，规则查询未自行启动动作、修改阶段或推进执行段号；不要求把连段状态强制放入请求，也不要求立即统一动作规则的归属。
+- 提交前新增修正：用户已补上 CanPend 阶段条件括号；新保存的 CanBegin 却在空闲时返回 false。用户明确授权助手仅将该占用判断改为 currentAction != PlayerAction.None。本次只进行静态核对，修正后 Play 验收仍待用户完成。
+- 保留前提：当前 LightAttack 的 derive 只接续下一段轻攻击；加入跨动作取消时，需要重新检查退出原因与段号推进，而不是无条件沿用 currentStep++。
+- 下一步：先回归空闲起手、A/B/C、Dash → DashAttack 与动作结束后的移动，再进入最小 Boss 接近和单招攻击；具体规则解析架构另行讨论，不自动继续扩展框架。
 
 ### YYYY-MM-DD
 - 变更：

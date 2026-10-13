@@ -2,6 +2,21 @@ using System;
 using UnityEngine;
 using UnityEngine.Android;
 using UnityEngine.InputSystem;
+public enum PlayerAction
+{
+    None,
+    LightAttack,
+    Dash,
+    DashAttack
+}
+public enum ActionPhase
+{
+    None,
+    Startup,
+    Active,
+    Recover
+}
+
 public enum DecisionKind
 {
     Begin,
@@ -72,17 +87,7 @@ public class PlayerActionController : MonoBehaviour
         return true;
     }
 
-    public bool TryBegin(PlayerAction action)
-    {
-        if(currentAction != PlayerAction.None)
-        {
-            Debug.LogWarning($"PlayerActionState:current action is {currentAction.ToString()}.",this);
-            return false;
-        }
-        currentAction = action;
-        currentPhase = ActionPhase.Startup;
-        return true;
-    }
+
     private bool TryBegin(ActionRequest request)
     {
         if(!CanBegin(request))
@@ -104,14 +109,14 @@ public class PlayerActionController : MonoBehaviour
         currentBehavior.OnPhaseEnter(ActionPhase.Startup);
         return true;
     }
-    public bool SetPhase(PlayerAction owner,ActionPhase phase)
+    private bool SetPhase(PlayerAction owner,ActionPhase phase)
     {
         if(owner!=currentAction)
             return false;
         currentPhase = phase;
         return true;
     }
-    public bool TryEnd(PlayerAction expectedAction)
+    private bool TryEnd(PlayerAction expectedAction)
     {
         if(!CanEnd(expectedAction))
             return false;
@@ -168,11 +173,9 @@ public class PlayerActionController : MonoBehaviour
     {
         if(!isActiveAndEnabled || !context.performed)
             return;
-        // TODO：当前只验收普通 Dash；攻击迁移后移除这条临时保护，恢复派生请求。
-        if(currentAction == PlayerAction.Dash || currentAction == PlayerAction.DashAttack)
-            return;
         ActionDecision decision = AnalyzeAttack();
         ApplyDecision(decision);
+        //light attack combo link shoule be interupted here
     }
     public void OnDash(InputAction.CallbackContext context)
     {
@@ -191,20 +194,22 @@ public class PlayerActionController : MonoBehaviour
             return new ActionDecision(DecisionKind.Begin,
             new ActionRequest(PlayerAction.LightAttack,_playerAttack.GetAttackDir()));
         }
+
         if(action == PlayerAction.Dash)
         {
             if(phase != ActionPhase.None)
             {
                 return new ActionDecision(DecisionKind.Pend,
-                new ActionRequest(PlayerAction.DashAttack,_dash.GetDashDir()));
+                new ActionRequest(PlayerAction.DashAttack,_dash.GetDashDir())); 
             }
         }
+
         if(action == PlayerAction.LightAttack)
         {
             if(phase == ActionPhase.Active ||
             phase == ActionPhase.Recover)
             {
-                if(_playerAttack.GetLightAttackStep()!=2)
+                if(_playerAttack.InCombo())
                 {
                     return new ActionDecision(DecisionKind.Pend,
                     new ActionRequest(PlayerAction.LightAttack,_playerAttack.GetAttackDir()));
@@ -232,8 +237,8 @@ public class PlayerActionController : MonoBehaviour
         currentPhase != ActionPhase.None)
             return request.action == PlayerAction.DashAttack;
         if(currentAction == PlayerAction.LightAttack &&
-        currentPhase == ActionPhase.Active ||
-        currentPhase == ActionPhase.Recover)
+        (currentPhase == ActionPhase.Active ||
+        currentPhase == ActionPhase.Recover))
             return request.action == PlayerAction.LightAttack;
         return false;
     }
@@ -241,7 +246,8 @@ public class PlayerActionController : MonoBehaviour
     {
         if(request.action == PlayerAction.None)
             return false;
-        
+        if(currentAction != PlayerAction.None)
+            return false;
         return true;
     }
     private bool CanEnd(PlayerAction action)
@@ -265,7 +271,7 @@ public class PlayerActionController : MonoBehaviour
         );
 
         float startupEnd = currentTiming.startupDuration;
-        float activeEnd = currentTiming.activeDuration;
+        float activeEnd = currentTiming.activeDuration+currentTiming.startupDuration;
         float actionEnd = currentTiming.TotalDuration;
 
         if(currentPhase == ActionPhase.Startup
