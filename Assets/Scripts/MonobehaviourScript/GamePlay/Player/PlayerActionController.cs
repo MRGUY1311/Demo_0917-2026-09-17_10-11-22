@@ -9,48 +9,7 @@ public enum PlayerAction
     Dash,
     DashAttack
 }
-public enum ActionPhase
-{
-    None,
-    Startup,
-    Active,
-    Recover
-}
 
-public enum DecisionKind
-{
-    Begin,
-    Pend,
-    Reject,
-}
-public struct ActionRequest
-{
-    public PlayerAction action;
-    public Vector3 dir;
-    public ActionRequest(PlayerAction _action,Vector3 _dir)
-    {
-        action = _action;
-        dir = _dir;
-    }
-    public static readonly ActionRequest Empty = new ActionRequest(PlayerAction.None,Vector3.zero);
-}
-public struct ActionDecision
-{   
-    public DecisionKind kind;
-    public ActionRequest request;
-    public ActionDecision(DecisionKind _kind,ActionRequest _request)
-    {
-        kind = _kind;
-        request = _request;
-    }
-    public static readonly ActionDecision rejection = new ActionDecision(DecisionKind.Reject,ActionRequest.Empty);
-}
-public enum ActionExitReason
-{
-    done,
-    derive,
-
-}
 public class PlayerActionController : MonoBehaviour
 {
     
@@ -58,12 +17,12 @@ public class PlayerActionController : MonoBehaviour
     
     public ActionPhase currentPhase {get;private set;}= ActionPhase.None;
     public PlayerAction currentAction {get;private set;}= PlayerAction.None;
-    private IPlayerActionBehavior currentBehavior;
-    private ActionRequest currentRequest;
+    private IActionBehavior<PlayerAction> currentBehavior;
+    private ActionRequest<PlayerAction> currentRequest;
     private ActionTiming currentTiming;
     private float elapsed;
 
-    private ActionRequest pendingRequest;
+    private ActionRequest<PlayerAction> pendingRequest;
     private Dash _dash;
     private PlayerAttack _playerAttack;
 
@@ -88,7 +47,7 @@ public class PlayerActionController : MonoBehaviour
     }
 
 
-    private bool TryBegin(ActionRequest request)
+    private bool TryBegin(ActionRequest<PlayerAction> request)
     {
         if(!CanBegin(request))
             return false;
@@ -139,7 +98,7 @@ public class PlayerActionController : MonoBehaviour
     {
         currentAction = PlayerAction.None;
         currentBehavior = null;
-        currentRequest = ActionRequest.Empty;
+        currentRequest = ActionRequest<PlayerAction>.Empty;
 
         currentPhase = ActionPhase.None;
         currentTiming = ActionTiming.Empty;
@@ -148,7 +107,7 @@ public class PlayerActionController : MonoBehaviour
 
     private void ClearPendingRequest()
     {
-        pendingRequest = ActionRequest.Empty;
+        pendingRequest = ActionRequest<PlayerAction>.Empty;
     }
     
     public bool GetMoveAccess()
@@ -156,7 +115,7 @@ public class PlayerActionController : MonoBehaviour
         return currentPhase == ActionPhase.None;
     }
 
-    private bool TryPend(ActionRequest request)
+    private bool TryPend(ActionRequest<PlayerAction> request)
     {
         if(pendingRequest.action != PlayerAction.None)
             return false;
@@ -165,15 +124,12 @@ public class PlayerActionController : MonoBehaviour
         pendingRequest = request;
         return true;
     }
-    private bool ExcuteCache()
-    {
-        return TryBegin(pendingRequest);
-    }
+
     public void OnAttack(InputAction.CallbackContext context)
     {
         if(!isActiveAndEnabled || !context.performed)
             return;
-        ActionDecision decision = AnalyzeAttack();
+        ActionDecision<PlayerAction> decision = AnalyzeAttack();
         ApplyDecision(decision);
         //light attack combo link shoule be interupted here
     }
@@ -184,23 +140,23 @@ public class PlayerActionController : MonoBehaviour
             return;
         if(currentAction != PlayerAction.None)
             return;
-        ActionRequest request = new ActionRequest(PlayerAction.Dash,_dash.GetDashDir());
+        ActionRequest<PlayerAction> request = new ActionRequest<PlayerAction>(PlayerAction.Dash,_dash.GetDashDir());
         TryBegin(request);
     }
-    private ActionDecision AnalyzeAttack(PlayerAction action,ActionPhase phase)
+    private ActionDecision<PlayerAction> AnalyzeAttack(PlayerAction action,ActionPhase phase)
     {
         if(action == PlayerAction.None)
         {
-            return new ActionDecision(DecisionKind.Begin,
-            new ActionRequest(PlayerAction.LightAttack,_playerAttack.GetAttackDir()));
+            return new ActionDecision<PlayerAction>(DecisionKind.Begin,
+            new ActionRequest<PlayerAction>(PlayerAction.LightAttack,_playerAttack.GetAttackDir()));
         }
 
         if(action == PlayerAction.Dash)
         {
             if(phase != ActionPhase.None)
             {
-                return new ActionDecision(DecisionKind.Pend,
-                new ActionRequest(PlayerAction.DashAttack,_dash.GetDashDir())); 
+                return new ActionDecision<PlayerAction>(DecisionKind.Pend,
+                new ActionRequest<PlayerAction>(PlayerAction.DashAttack,_dash.GetDashDir())); 
             }
         }
 
@@ -211,18 +167,18 @@ public class PlayerActionController : MonoBehaviour
             {
                 if(_playerAttack.InCombo())
                 {
-                    return new ActionDecision(DecisionKind.Pend,
-                    new ActionRequest(PlayerAction.LightAttack,_playerAttack.GetAttackDir()));
+                    return new ActionDecision<PlayerAction>(DecisionKind.Pend,
+                    new ActionRequest<PlayerAction>(PlayerAction.LightAttack,_playerAttack.GetAttackDir()));
                 }
             }
         }
-        return ActionDecision.rejection;
+        return ActionDecision<PlayerAction>.rejection;
     }
-    private ActionDecision AnalyzeAttack()
+    private ActionDecision<PlayerAction> AnalyzeAttack()
     {
         return AnalyzeAttack(currentAction,currentPhase);
     }
-    private void ApplyDecision(ActionDecision decision)
+    private void ApplyDecision(ActionDecision<PlayerAction> decision)
     {
         if(decision.kind == DecisionKind.Begin)
             TryBegin(decision.request);
@@ -231,7 +187,7 @@ public class PlayerActionController : MonoBehaviour
         else
             return;
     }
-    private bool CanPend(ActionRequest request)
+    private bool CanPend(ActionRequest<PlayerAction> request)
     {
         if(currentAction == PlayerAction.Dash   &&
         currentPhase != ActionPhase.None)
@@ -242,7 +198,7 @@ public class PlayerActionController : MonoBehaviour
             return request.action == PlayerAction.LightAttack;
         return false;
     }
-    private bool CanBegin(ActionRequest request)
+    private bool CanBegin(ActionRequest<PlayerAction> request)
     {
         if(request.action == PlayerAction.None)
             return false;

@@ -3,7 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class PlayerAttack : MonoBehaviour,IPlayerActionBehavior
+public class PlayerAttack : MonoBehaviour,IActionBehavior<PlayerAction>
 {
     private enum LightAttackStep
     {
@@ -20,7 +20,7 @@ public class PlayerAttack : MonoBehaviour,IPlayerActionBehavior
     private PlayerAim _playerAim;
     private PlayerActionController _playerActionController;
     private Animator _animator;
-    private ActionRequest excutionRequest;
+    private ActionRequest<PlayerAction> excutionRequest;
     public bool inCombo => currentStep!=2;
     private int currentStep = 0;
 
@@ -71,12 +71,12 @@ public class PlayerAttack : MonoBehaviour,IPlayerActionBehavior
     }
 
 
-    ActionTiming IPlayerActionBehavior.GetTiming(ActionRequest request)
+    ActionTiming IActionBehavior<PlayerAction>.GetTiming(ActionRequest<PlayerAction> request)
     {
         return segments[currentStep].timing;
     }
 
-    void IPlayerActionBehavior.Enter(ActionRequest request)
+    void IActionBehavior<PlayerAction>.Enter(ActionRequest<PlayerAction> request)
     {
         excutionRequest = request;
         if(excutionRequest.dir == Vector3.zero)
@@ -87,7 +87,7 @@ public class PlayerAttack : MonoBehaviour,IPlayerActionBehavior
         _playerFacing.ChangeFacing(excutionRequest.dir);
     }
 
-    void IPlayerActionBehavior.OnPhaseEnter(ActionPhase phase)
+    void IActionBehavior<PlayerAction>.OnPhaseEnter(ActionPhase phase)
     {
         switch (phase)
         {
@@ -109,19 +109,19 @@ public class PlayerAttack : MonoBehaviour,IPlayerActionBehavior
         }
     }
 
-    void IPlayerActionBehavior.Tick(float deltaTime)
+    void IActionBehavior<PlayerAction>.Tick(float deltaTime)
     {
         return;
     }
 
-    void IPlayerActionBehavior.Exit(ActionExitReason reason)
+    void IActionBehavior<PlayerAction>.Exit(ActionExitReason reason)
     {
         switch (reason)
         {
             case ActionExitReason.done:
                 _animator.SetTrigger("AttackEnd");
                 currentStep = 0;
-                excutionRequest = ActionRequest.Empty;
+                excutionRequest = ActionRequest<PlayerAction>.Empty;
                 break;
             case ActionExitReason.derive:
                 currentStep++;

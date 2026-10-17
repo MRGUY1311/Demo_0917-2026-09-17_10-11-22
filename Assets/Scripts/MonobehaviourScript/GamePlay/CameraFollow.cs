@@ -38,6 +38,11 @@ public class CameraFollow : MonoBehaviour
     void LateUpdate()
     {
         float t = 1f - Mathf.Exp(-followSharpness * Time.deltaTime);
+        if (!desired)
+        {
+            desired = null;
+            return;
+        }
         Vector3 desiredpos = desired.position;
 
         Vector3 pos = Vector3.Lerp(transform.position,desiredpos+offset,t);

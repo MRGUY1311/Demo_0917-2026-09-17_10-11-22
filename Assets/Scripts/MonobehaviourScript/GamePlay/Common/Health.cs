@@ -3,14 +3,15 @@ using UnityEngine;
 public class Health : MonoBehaviour
 {
     
-    [SerializeField]private float maxHealth = 1;
+    [SerializeField]private float maxHealth = 5;
     [SerializeField]private float currentHealth;
     private bool isDead = false;
+
     public bool TakeDamage(float damage)
     {
         if(isDead)
         {
-            Debug.LogError("Health:current health less than 0",this);
+            Debug.LogWarning("Health:current health less than 0",this);
             return false;
         }
         else
@@ -26,6 +27,7 @@ public class Health : MonoBehaviour
     public void OnDie()
     {
         Debug.Log($"Health:{this.name} is dead",this);
+        Destroy(gameObject.transform.root.gameObject);
     }
     public void Die()
     {
@@ -36,6 +38,8 @@ public class Health : MonoBehaviour
 
     void Awake()
     {
+        if(maxHealth<=0)
+            Debug.LogError("Health:max health can't be less than 0",this);
         currentHealth = maxHealth;
     }
 

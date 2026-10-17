@@ -5,7 +5,6 @@ public struct ActionTiming
     public float activeDuration;
     public float recoveryDuration;
 
-    // 只描述阶段时长，阶段推进仍由动作脚本负责。
     public float TotalDuration =>
         startupDuration + activeDuration + recoveryDuration;
 

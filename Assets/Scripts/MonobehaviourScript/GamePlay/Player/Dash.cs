@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityPipeline.Microsoft.CodeAnalysis.CSharp.Syntax;
 
-public class Dash : MonoBehaviour,IPlayerActionBehavior
+public class Dash : MonoBehaviour,IActionBehavior<PlayerAction>
 {
     private CharacterController _characterController;
     private Player _player;
@@ -18,7 +18,7 @@ public class Dash : MonoBehaviour,IPlayerActionBehavior
     [SerializeField]private bool isMouseAim = true;
     [SerializeField]private DashSettings dashSettings;
     private float dashVelocity;
-    private ActionRequest excutionRequest;
+    private ActionRequest<PlayerAction> excutionRequest;
     private float moved;
     void Awake()
     {
@@ -54,7 +54,7 @@ public class Dash : MonoBehaviour,IPlayerActionBehavior
         return true;
     }
 
-    ActionTiming IPlayerActionBehavior.GetTiming(ActionRequest request)
+    ActionTiming IActionBehavior<PlayerAction>.GetTiming(ActionRequest<PlayerAction> request)
     {
         switch (request.action)
         {
@@ -69,7 +69,7 @@ public class Dash : MonoBehaviour,IPlayerActionBehavior
         
     }
 
-    void IPlayerActionBehavior.Enter(ActionRequest request)
+    void IActionBehavior<PlayerAction>.Enter(ActionRequest<PlayerAction> request)
     {
         excutionRequest = request;
         if(excutionRequest.dir == Vector3.zero)
@@ -81,7 +81,7 @@ public class Dash : MonoBehaviour,IPlayerActionBehavior
 
     }
 
-    void IPlayerActionBehavior.OnPhaseEnter(ActionPhase phase)
+    void IActionBehavior<PlayerAction>.OnPhaseEnter(ActionPhase phase)
     {
         switch (phase)
         {
@@ -108,7 +108,7 @@ public class Dash : MonoBehaviour,IPlayerActionBehavior
         }
     }
 
-    void IPlayerActionBehavior.Tick(float deltaTime)
+    void IActionBehavior<PlayerAction>.Tick(float deltaTime)
     {
         switch (excutionRequest.action)
         {
@@ -138,12 +138,12 @@ public class Dash : MonoBehaviour,IPlayerActionBehavior
         }
     }
 
-    void IPlayerActionBehavior.Exit(ActionExitReason reason)
+    void IActionBehavior<PlayerAction>.Exit(ActionExitReason reason)
     {
         switch (reason)
         {
             case ActionExitReason.done:
-                excutionRequest = ActionRequest.Empty;
+                excutionRequest = ActionRequest<PlayerAction>.Empty;
                 moved = 0;
                 _animator.SetBool("PendingDashAttack",false);
                 break;
