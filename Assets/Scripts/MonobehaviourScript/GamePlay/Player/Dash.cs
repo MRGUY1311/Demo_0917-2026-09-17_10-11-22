@@ -113,7 +113,9 @@ public class Dash : MonoBehaviour,IActionBehavior<PlayerAction>
         switch (excutionRequest.action)
         {
             case PlayerAction.Dash:
-                {
+                {   
+                    if(deltaTime <= 0)
+                        return;
                     var dir = excutionRequest.dir;
                     if(moved < dashSettings.distance)
                     {
@@ -128,8 +130,10 @@ public class Dash : MonoBehaviour,IActionBehavior<PlayerAction>
 
                         bool hitObstacle = (flags & CollisionFlags.Sides)!=0;
 
-                        if(hitObstacle || actual < 1e-4f)
+                        if(hitObstacle || actual < 1e-4f && Time.timeScale!=0)
+                        {
                             moved = dashSettings.distance;
+                        }
                     }
                 }
                 return;

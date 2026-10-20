@@ -111,7 +111,8 @@ public class PlayerAttack : MonoBehaviour,IActionBehavior<PlayerAction>
 
     void IActionBehavior<PlayerAction>.Tick(float deltaTime)
     {
-        return;
+        if (deltaTime <= 0f)
+            return;
     }
 
     void IActionBehavior<PlayerAction>.Exit(ActionExitReason reason)

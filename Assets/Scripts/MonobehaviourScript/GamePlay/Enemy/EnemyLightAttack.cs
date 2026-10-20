@@ -83,7 +83,8 @@ public class EnemyLightAttack : MonoBehaviour,IActionBehavior<EnemyAction>
 
     void IActionBehavior<EnemyAction>.Tick(float deltaTime)
     {
-        return;
+        if (deltaTime <= 0f)
+            return;
     }
     private bool TryInitialize()
     {

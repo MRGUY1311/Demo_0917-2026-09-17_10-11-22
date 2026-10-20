@@ -7,7 +7,7 @@
 
 ## 清单使用与阶段安排
 
-最近核对：2026-10-13，依据提交基线 `1934f2a` 及当前保存的代码、配置。用户于 10/12 反馈 Dash → DashAttack 接通并验收通过，10/13 10:16 反馈 LightAttack 链路接通、测试暂未发现问题。新管理器已驱动 Dash、DashAttack 与轻连段；助手静态审查未发现当时 A/B/C 可达路径的阻断问题。提交前另发现新保存的 CanBegin 占用判断写反，经用户授权仅修正这一行；该修正尚未收到新的 Play 验收。历史勾选与本轮基础验收不代表全部边界已覆盖，助手没有编译、Play 或构建。
+最近核对：2026-10-13，依据提交基线 `346cf2b` 及当前保存的代码、配置。用户于 10/12 反馈 Dash → DashAttack 接通并验收通过，10/13 10:16 反馈 LightAttack 链路接通、测试暂未发现问题。新管理器已驱动 Dash、DashAttack 与轻连段；助手静态审查未发现当时 A/B/C 可达路径的阻断问题。提交前另发现新保存的 CanBegin 占用判断写反，经用户授权仅修正这一行并推送；提交后用户反馈测试没有问题。历史勾选与本轮基础验收不代表全部边界已覆盖，助手没有编译、Play 或构建。
 
 - `[x]`：该事项描述的最小版本已经成立；后续手感与稳定性验收仍可发现问题。
 - `[ ]`：尚未完成；注明“部分完成”的事项保留已有成果与剩余缺口。
@@ -405,6 +405,32 @@ v0 不要求“工业化”或作品集级包装，只要求形成完整的自�
 - 提交前新增修正：用户已补上 CanPend 阶段条件括号；新保存的 CanBegin 却在空闲时返回 false。用户明确授权助手仅将该占用判断改为 currentAction != PlayerAction.None。本次只进行静态核对，修正后 Play 验收仍待用户完成。
 - 保留前提：当前 LightAttack 的 derive 只接续下一段轻攻击；加入跨动作取消时，需要重新检查退出原因与段号推进，而不是无条件沿用 currentStep++。
 - 下一步：先回归空闲起手、A/B/C、Dash → DashAttack 与动作结束后的移动，再进入最小 Boss 接近和单招攻击；具体规则解析架构另行讨论，不自动继续扩展框架。
+
+#### 提交后回归与 DashAttack 方向策略分歧（待决定）
+
+- 回归：用户在 `346cf2b` 提交及推送后反馈测试没有问题；本记录不补推未报告的具体测试次数或边界覆盖。
+- 旧版行为：按用户本次反馈，Controller 迭代前的 DashAttack 沿用本次 Dash 的方向。
+- 当前行为：Controller 在生成 DashAttack 请求时调用 GetDashDir 重新读取方向，首次成功预约的请求保存该方向；DashAttack.Enter 使用 request.dir，不在实际起手时再次重采样。GetDashDir 根据当前模式读取 Mouse Aim 或 Facing，并不强制沿用本次 Dash 的执行方向。
+- 分歧点：沿用 Dash 方向强调翻滚与派生攻击的方向连续性；请求时重采样允许输入攻击时选择不同方向。这是 Gameplay 规则差异，暂不自动定性为 Bug，也不将新版行为视为已经确定的最终政策。
+- 后续比较：翻滚中改变鼠标方位再输入攻击，分别观察两种方向模式下的位移、攻击朝向与命中方向，再决定是否沿用 Dash 方向或保留请求时重采样。本次只记录，不改当前实现。
+
+### 2026-10-17：Aim 接入 Player Map
+
+- 问题：PlayerAim 直接读取 Mouse.current.position，禁用 Player Map 时仍会继续采样，无法与暂停期间的 Gameplay 输入一起停用。
+- 变更：在实际供玩家 PlayerInput 使用的 PlayerActions 中新增 Player/AimPosition（Value / Vector2，绑定 <Mouse>/position）；PlayerAim 从同节点 PlayerInput.actions 获取该动作，在动作启用时读取屏幕坐标，禁用时保留最后的 mouseAim。不自行 Enable / Disable 动作，不读取项目级另一份 InputSystem_Actions。
+- 保留：原 ScreenPointToRay、水平 Plane 求交、方向单位化与零方向 fallback 不变；现有 Look 的鼠标 delta / 摇杆绑定与 UI/Point 不变。仍每帧重新投影，使鼠标静止而角色或相机移动时也能更新瞄准。
+- 范围与验收：本次只接入 Aim 输入与记录，不实现 Pause / Resume / Restart / HUD，不改场景事件接线，不编译或 Play。待用户验证正常瞄准、禁用 Player Map 后方向保持，以及重新启用后鼠标未移动也能恢复采样（Value 动作在下次 Input System 更新进行初始状态检查）。
+- 暂停接线边界：Enable 后、下次输入更新前，ReadValue 可能暂时返回默认屏幕坐标 (0,0)；恢复当帧的采样时序留到 Pause / Resume 接线时核对，不把合法屏幕坐标 (0,0) 当作无效输入。
+
+### 2026-10-20：暂停 / 恢复与零时间 Tick 防御
+
+- 状态与职责：GameStateManager 作为场景组件维护 None / InGame / Pause，提供 GameStarted / Paused / Resumed 无参事件；暂停与恢复先更新状态及 timeScale，再发布通知。PauseManager 负责暂停输入、事件订阅 / 退订和 Player / UI Map 切换，Player 不再处理暂停职责。
+- UI：使用 UI Toolkit 的 PanelRenderer 和 PauseOverlay；PauseMenuController 缓存显示要求，在 UI 重载后重新查询元素、绑定按钮并恢复 display 状态，开局隐藏，暂停显示，恢复隐藏。SampleScene 接好 Managers、PlayerInput、菜单、PanelSettings 与双 Map 的 Pause 输入。
+- Bug 与原因：恢复当帧可能已经读取到 timeScale = 1，但本帧传入 Tick 的 deltaTime 仍为 0。Dash 的零步长导致 actual = 0，被误判为受阻并把 moved 写成完整距离，剩余动作只播放原地动画。仅在停止条件中检查 timeScale != 0 不能覆盖该时序。
+- 修正与验收：用户已在 Dash 位移分支按传入 deltaTime <= 0 直接返回，并确认恢复后可安全 Dash。本次在 PlayerAttack、EnemyLightAttack 的 Tick 入口加入相同保护；两者目前仍为空行为，不据此声称新增了每帧攻击逻辑或完成敌人暂停权限控制。
+- 边界：Tick 的零时间保护只约束该次行为调用，不阻止 Controller 在 Tick 外进行阶段检查，也不阻止 EnemyAI 发出新请求；敌人即将起手时暂停、阶段边界、玩家死亡后菜单与 Aim 恢复初检仍待单独回归。Restart 仍仅调用 StartGame，Quit 按钮仍仅日志，不标记为功能完成。
+- 提交范围：保存本轮 GameState / PauseManager、UI Toolkit 菜单与原生配置、Aim 接入 Player Map、输入 / 场景接线和 Tick 防御；第三方资源、生成的 UIElementsSchema、日程更新及无关动画过渡参数不纳入。助手仅静态核对，不编译、Play 或构建。
+- 下次入口：完成 Restart 的当前场景重载与时间缩放恢复，再核对玩家死亡后菜单可用性和敌人暂停请求边界；不自动扩展 UI 框架或动作调度架构。
 
 ### YYYY-MM-DD
 - 变更：
