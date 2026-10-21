@@ -1,0 +1,7 @@
+<ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/HUD/USS/PauseMenu.uss?fileID=7433441132597879392&amp;guid=52a5bfefcc7f2074a9f1a4767180cf95&amp;type=3#PauseMenu"/>
+    <ui:VisualElement name="DeadOverlay" style="flex-grow: 1; backdrop-filter: blur(3.19);">
+        <ui:Button text="Quit" name="QuitButton" class="pause-button" style="translate: 0 118px; align-content: flex-start; align-self: center;"/>
+        <ui:Button text="Restart" name="RestartButton" class="pause-button" style="translate: 0 125px; align-self: center;"/>
+    </ui:VisualElement>
+</ui:UXML>

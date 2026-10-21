@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class Health : MonoBehaviour
@@ -6,7 +7,8 @@ public class Health : MonoBehaviour
     [SerializeField]private float maxHealth = 5;
     [SerializeField]private float currentHealth;
     private bool isDead = false;
-
+    public event Action Died;
+    
     public bool TakeDamage(float damage)
     {
         if(isDead)
@@ -31,7 +33,11 @@ public class Health : MonoBehaviour
     }
     public void Die()
     {
+        if(isDead)
+            return;
+
         isDead = true;
+        Died?.Invoke();
         OnDie();
     }
 

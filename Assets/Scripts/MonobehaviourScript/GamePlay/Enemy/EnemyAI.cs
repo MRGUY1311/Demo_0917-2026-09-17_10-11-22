@@ -5,7 +5,9 @@ using UnityEngine;
 public class EnemyAI : MonoBehaviour
 {
     private EnemyActionController actionController;
+
     private float lastRequestTime;
+    public static int survivalCount {get;private set;}= 0;
     [SerializeField]private float serachRadius;
     private EnemyLightAttack _enemyLightAttack;
     [SerializeField]private float requestInterval = 3f;
@@ -20,6 +22,22 @@ public class EnemyAI : MonoBehaviour
         }
         player = GameObject.Find("Player");
         _enemyLightAttack.TryChangeAttackTarget(player.transform);
+        add();
+    }
+    private static void add()
+    {
+        survivalCount++;
+        Debug.Log($"EnemyAI:survival count is {survivalCount}");
+    }
+    public static void sub()
+    {
+        if(survivalCount<=0)
+        {
+            Debug.LogError("Enemies are dead already.");
+            return;
+        }
+        survivalCount--;
+        Debug.Log($"EnemyAI:survival count is {survivalCount}");
     }
     // Update is called once per frame
     void Update()

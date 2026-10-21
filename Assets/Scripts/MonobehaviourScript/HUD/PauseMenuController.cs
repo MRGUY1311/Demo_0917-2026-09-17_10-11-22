@@ -14,7 +14,7 @@ public class PauseMenuController : MonoBehaviour
     private Button quitButton;
 
     [SerializeField]private PauseManager _pauseManager;
-    [SerializeField]private GameStateManager _gameStateManager;
+
 
     private void OnEnable()
     {
@@ -25,7 +25,6 @@ public class PauseMenuController : MonoBehaviour
     void Awake()
     {
         GameObject.Find("Managers").TryGetComponent(out _pauseManager);
-        GameObject.Find("Managers").TryGetComponent(out _gameStateManager);   
     }
     void Start()
     {
