@@ -25,22 +25,17 @@ public class PlayerMovement : MonoBehaviour
     {
         if (!this.TryRequireComponent(out _player) ||
             !this.TryRequireComponent(out _playerFacing)||
-            !this.TryRequireComponent(out _playerActionController))
+            !this.TryRequireComponent(out _playerActionController)||
+            !this.TryRequireComponent(out _controller)||
+            !this.TryRequireComponent(out _animator, searchChildren: true))
         {
             return false;
         }
 
         referenceCamera = _player.GetCamera();
-        _controller = _player.GetCharacterController();
-        _animator = _player.GetAnimator();
         if (referenceCamera == null)
         {
             Debug.LogError("Require reference camera.", this);
-            return false;
-        }
-        if(_controller == null)
-        {
-            Debug.LogError("Require character controller.",this);
             return false;
         }
         return true;
