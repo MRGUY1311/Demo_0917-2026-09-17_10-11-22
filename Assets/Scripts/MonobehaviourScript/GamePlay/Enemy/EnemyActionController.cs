@@ -35,7 +35,13 @@ public class EnemyActionController : MonoBehaviour
     {
         ActionDecision<EnemyAction> decision = AnalyzeAttack();
         ApplyDecision(decision);
-        return true;
+        return decision.kind == DecisionKind.Reject;
+    }
+    public bool TryAttack(Vector3 dir)
+    {
+        ActionDecision<EnemyAction> decision = AnalyzeAttack(dir);
+        ApplyDecision(decision);
+        return decision.kind == DecisionKind.Reject;
     }
 
     private void Update()
@@ -72,19 +78,23 @@ public class EnemyActionController : MonoBehaviour
         currentPhase = nextPhase;
         currentBehavior.OnPhaseEnter(nextPhase);
     }
-    private ActionDecision<EnemyAction> AnalyzeAttack(EnemyAction action,ActionPhase phase)
+    private ActionDecision<EnemyAction> AnalyzeAttack(EnemyAction action,ActionPhase phase,Vector3 attackDir)
     {
         if(action == EnemyAction.None)
         {
             return new ActionDecision<EnemyAction>(DecisionKind.Begin,
-            new ActionRequest<EnemyAction>(EnemyAction.LightAttack,_enemyLightAttack.GetAttackDir()));
+            new ActionRequest<EnemyAction>(EnemyAction.LightAttack,attackDir));
         }
 
         return ActionDecision<EnemyAction>.rejection;
     }
     private ActionDecision<EnemyAction> AnalyzeAttack()
     {
-        return AnalyzeAttack(currentAction,currentPhase);
+        return AnalyzeAttack(currentAction,currentPhase,_enemyLightAttack.GetAttackDir());
+    }
+    private ActionDecision<EnemyAction> AnalyzeAttack(Vector3 dir)
+    {
+        return AnalyzeAttack(currentAction,currentPhase,dir);
     }
     private void ApplyDecision(ActionDecision<EnemyAction> decision)
     {

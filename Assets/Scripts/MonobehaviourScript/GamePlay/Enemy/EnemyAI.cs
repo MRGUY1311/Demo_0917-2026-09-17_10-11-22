@@ -14,9 +14,7 @@ public class EnemyAI : MonoBehaviour
     private EnemyMovement _enemyMovement;
     private EnemyPerception _enemyPerception;
     private float lastRequestTime = 0;
-    private float lastSerachTime = 0;
     private float elapsed => Time.time - lastRequestTime;
-    private float serachElapsed => Time.time - lastSerachTime;
     [SerializeField]
     private float requestInterval = 3f;
     [SerializeField]
@@ -32,7 +30,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
         player = GameObject.Find("Player");
-        _enemyLightAttack.TryChangeAttackTarget(player.transform);
+        _enemyLightAttack.TryChangeAttackTarget(player ? player.transform : null);
         add();
     }
     private void Start()
@@ -57,6 +55,15 @@ public class EnemyAI : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (!player)
+        {
+            player = null;
+            _enemyLightAttack.TryChangeAttackTarget(null);
+            ChangeState(EnemyState.Idle);
+            enabled = false;
+            return;
+        }
+
         switch (currentState)
         {
             case EnemyState.None:
@@ -102,14 +109,14 @@ public class EnemyAI : MonoBehaviour
                 _enemyMovement.Stop();
                 return;
             case EnemyState.Attack:
+                _enemyMovement.Stop();
+                RefreshAttackIntent();
                 return;
             case EnemyState.Chase:
                 RefreshChaseMoveIntent();
-                lastRequestTime = Time.time;
                 return;
             case EnemyState.Patrol:
                 RefreshPatrolMoveIntent();
-                lastRequestTime = Time.time;
                 return;
         }
     }
@@ -119,7 +126,6 @@ public class EnemyAI : MonoBehaviour
         {
             case EnemyState.None:
             case EnemyState.Idle:
-                
                 return;
             case EnemyState.Attack:
                 return;
@@ -133,10 +139,9 @@ public class EnemyAI : MonoBehaviour
     }
     private void TickIdle()
     {
-        if(serachElapsed < stateData.serachDuration) 
+        if(!_enemyPerception.TrySearch(player, out bool found))
             return;
-        lastSerachTime = Time.time;
-        if(_enemyPerception.TryFindPlayer(player))
+        if(found)
         {
             ChangeState(EnemyState.Chase);
             return;
@@ -149,10 +154,9 @@ public class EnemyAI : MonoBehaviour
     }
     private void TickChase()
     {
-        if(serachElapsed > stateData.serachDuration)
+        if(_enemyPerception.TrySearch(player, out bool found))
         {
-            lastSerachTime = Time.time;
-            if (_enemyPerception.TryFindPlayer(player)&&
+            if (found&&
             playerDistance<=stateData.attackRange)
             {
                 ChangeState(EnemyState.Attack);
@@ -173,10 +177,9 @@ public class EnemyAI : MonoBehaviour
     }
     private void TickPatrol()
     {
-        if(serachElapsed > stateData.serachDuration)
+        if(_enemyPerception.TrySearch(player, out bool found))
         {
-            lastSerachTime = Time.time;
-            if (_enemyPerception.TryFindPlayer(player))
+            if (found)
             {
                 ChangeState(EnemyState.Chase);
                 return;
@@ -187,11 +190,27 @@ public class EnemyAI : MonoBehaviour
         RefreshPatrolMoveIntent();
         lastRequestTime = Time.time;
     }
+    private void TickAttack()
+    {
+        if(_enemyPerception.TrySearch(player,out bool found))
+        {
+            if(found)
+            {
+                if(elapsed >= stateData.attackInterval)
+                    RefreshAttackIntent();
+                return;
+            }
+            ChangeState(EnemyState.Chase);
+        }
+        
+
+    }
     private void RefreshChaseMoveIntent()
     {
         Vector3 offset = player.transform.position - transform.position;
         Vector2 dir = new Vector2(offset.x, offset.z).normalized;
         _enemyMovement.SetMoveIntent(dir, stateData.chaseVelocity);
+        lastRequestTime = Time.time;
     }
     private void RefreshPatrolMoveIntent()
     {
@@ -208,11 +227,14 @@ public class EnemyAI : MonoBehaviour
             dir.x * sin + dir.y * cos
         );
         _enemyMovement.SetMoveIntent(dir, stateData.patrolVelocitiy);
+        lastRequestTime = Time.time;
     }
-    private void TickAttack()
+    private void RefreshAttackIntent()
     {
-        
+        actionController.TryAttack();
+        lastRequestTime = Time.time;
     }
+
     private bool canRequest()
     {
         return Time.time - lastRequestTime >= requestInterval;

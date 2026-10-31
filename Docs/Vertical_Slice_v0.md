@@ -7,7 +7,7 @@
 
 ## 清单使用与阶段安排
 
-最近核对：2026-10-29，依据上次已推送基线 `d9419c4` 及本轮保存的代码、配置。此前玩家动作、最小敌人近战、暂停 / 恢复与死亡菜单已接通，10/21 用户反馈当轮给出的几项验收均已通过。本轮 SkeletonKnight 的 Patrol ↔ Chase 已由用户验收通过；EnemyMovement 的完整移动意图 / 停止入口及 Enter / Tick 复用已接入。EnemyAI.TickAttack 仍为空，追击 / 停步 / 攻击衔接不标记完成；Perception 的扫描计时仍由 AI 维护，职责迭代尚未完成。静态存活计数沿用简单 reset，按用户决定遇到实际问题后再补全；清敌后的结束流程继续用 Pause 占位 End，正式终局权限与 Quit 尚未完成。历史勾选不代表所有边界已验收；助手本轮进行了静态检查和棋盘材质的编辑器预览，没有自行 Play 或构建。
+最近核对：2026-10-31，依据已推送基线 `4390967` 及本次收工更新。SkeletonKnight 的 Patrol ↔ Chase 已于 10/29 由用户验收；本轮接通 Attack ↔ Chase，用户反馈没有问题。搜索计时由 EnemyPerception 维护，AI 继续负责状态决策，Attack 状态接入重复攻击请求间隔。玩家销毁后清空 AI / 攻击目标引用并停止 AI 决策。已保存持剑动画层及场景调整；已接通的 LightAttackA 保留原 Motion、Speed 设为 0.5，按用户确认将阶段时长线性调整为 0.66 / 0.26 / 0.66 秒，最后这组保存值仍待 Play 回归。下周主要设计并实现 Skeleton 的完整敌人状态机，减少手工动画制作，优先复用包内动作。静态存活计数沿用简单 reset，清敌后继续用 Pause 占位 End；正式终局权限与 Quit 尚未完成。助手本轮仅静态核对，没有主动编译、Play 或构建。
 
 - `[x]`：该事项描述的最小版本已经成立；后续手感与稳定性验收仍可发现问题。
 - `[ ]`：尚未完成；注明“部分完成”的事项保留已有成果与剩余缺口。
@@ -171,8 +171,8 @@
 ### Boss 行为
 - [ ] 基础距离判断
 - [ ] 攻击选择
-- [ ] 攻击间隔
-- [x] 追击 / 接近的最小实现（SkeletonKnight Patrol ↔ Chase，2026-10-29 用户验收；与攻击的衔接仍待完成）
+- [x] 攻击间隔的最小实现（Attack 状态通过 attackInterval 控制重复请求；跨状态冷却与请求拒绝后的计时语义待后续核对）
+- [x] 追击 / 接近的最小实现（SkeletonKnight Patrol ↔ Chase 于 2026-10-29 验收；Attack ↔ Chase 于 10/31 接通并由用户反馈没有问题）
 - [ ] 受击
 - [ ] Stagger
 - [ ] Death
@@ -473,6 +473,28 @@ v0 不要求“工业化”或作品集级包装，只要求形成完整的自�
 - 提交前修复：静态检查发现 SampleScene 的 Plane 网格索引数据末尾多出非法字符 y。按用户明确批准只删除该字符；修复后为 600 个合法 UInt16 索引，最大索引 120，与 121 个顶点匹配，不重建网格或调整碰撞。
 - 未完成与下次入口：Perception 目前只集中范围 / 视角查询，扫描节奏仍分散在 AI；后续先讨论采样节奏与结果读取的职责。TickAttack 仍为空，旧 Update 尾部的攻击请求在正常枚举状态下不可达，需另接通 Chase → Attack → 后续状态，不在本次提交中顺手实现。
 - 提交边界：仅保存本节点代码、场景 / 敌人动画配置、自产棋盘资源及工作清单；ThirdPartyAssets、生成的 UIElementsSchema、日程更新、空接口草稿、无关 PlayerCombat 过渡参数与 Player.cs 空白改动不纳入。用户验收与助手静态检查分别记录，不声称助手自行完成 Play / 构建验收。
+
+### 2026-10-30：Perception 搜索计时迁移与 Attack 草稿收工节点
+
+- 职责约定：Perception 维护搜索计时并执行范围 / 视角查询，AI 发出请求、根据观察结果决定状态。TrySearch 返回 false 表示间隔未到、跳过本次搜索；返回 true 才读取 out found，区分已搜索发现 / 未发现目标。不引入缓存、独立 Update 或事件系统。
+- 已实现：searchInterval / lastSearchTime 移入 EnemyPerception；AI 的 Idle / Chase / Patrol 三处改用 TrySearch，删除原有搜索计时字段。搜索间隔从 EnemyStateData 及其构造参数移出，SampleScene 的 0.5 秒迁到 Perception；其它状态参数、视距、视角与移动规则保持原值。边界统一为达到间隔即可搜索，Chase / Patrol 原先的严格大于改为大于等于。
+- 语义保留：跳过搜索时 Idle 不执行随机巡逻决策；Chase / Patrol 仍继续移动更新。实际搜索无论是否发现目标都会更新时间，计时不随 AI 状态切换重置。
+- 版本交接：本轮发现 AI 和 EnemyStateData 又出现旧搜索字段，而 Perception 与场景仍保留新配置，形成混合版本；未据此认定具体覆盖来源。按用户要求重新应用搜索迁移，保留新增 Attack、用户移入移动 Refresh 的计时重置及其它改动，并通过源码对照和受保护文件哈希确认边界。
+- 未完成：用户明确 Attack 尚未接通。保留 Attack Enter 的 Stop / RefreshAttackIntent、攻击请求方法及 EnemyActionController 改动；TickAttack 中的 if(_enemyPerception.) 仍是用户未完成草稿，助手没有补写或修复。新的 Perception 迁移未收到明确验收通过反馈，不将昨日 Patrol ↔ Chase 的验收自动沿用为本轮通过。
+- 下次入口：先核对编辑器未保存内容与磁盘版本一致，再由用户继续完成 Attack 草稿并回归感知 / Patrol ↔ Chase。随后核对攻击请求实际启动结果、动作完成后的状态退出和攻击间隔，接通 Chase → Attack → 后续状态；不另加招式或状态机框架。
+- 收尾：今天预算为 2.5h，不据此填写实际有效投入。本次收工仅更新记录，不继续改脚本、不编译 / Play / 构建，也不提交或推送；当前代码、配置与无关本地改动全部保留。
+
+### 2026-10-31：Attack ↔ Chase 接通、目标引用清理与动画节奏收工节点
+
+- 用户反馈：Attack ↔ Chase 已接通，后续反馈没有问题；记录本轮最小链路成立，不扩展为所有感知边界、死亡 / Restart、暂停或动画时序均已通过。今天预算为 2.5h，仅作预算，不据此填写实际有效投入。
+- 感知与行为：一并保存前一日尚未提交的 TrySearch 迁移，Perception 维护搜索间隔，AI 区分跳过与有效观察后决定状态。进入 Attack 时停止移动并请求攻击；TickAttack 依据观察结果继续请求或返回 Chase，重复请求按 EnemyStateData.attackInterval 调节。场景攻击范围为 2、间隔为 1.2 秒；不改变用户现有请求返回值、状态退出或拒绝计时规则。
+- 玩家死亡引用：EnemyAI.Update 在玩家被销毁后的下一次更新清空 player，并通过现有 API 清空 EnemyLightAttack.target；转入 Idle 停止移动、禁用本局 AI 决策。在途动作继续由 Controller 收尾，Restart 重载场景后重新创建 AI。Awake 同时保护找不到玩家时的 Transform 读取；未引入全局事件依赖或动作取消框架，本项待用户回归。
+- 武器与移动表现：用户在 Custom 人物资源中挂载大剑并调整 WeaponSocket；PlayerCombat / SkeletonKnight 新增与 Base Layer 同步的 SwordHold 层，以右臂遮罩在 Locomotion 使用持剑 Idle。Skeleton 场景模型放大到 1.7 倍，Locomotion Speed 设为 0.75。Custom 与原包资源继续保留在被忽略的 ThirdPartyAssets 中，不作为项目自产资产提交到公开仓库。
+- 当前攻击选择：用户明确没有替换已接通状态的 Motion，LightAttackA 继续使用现有轻击，只将 Speed 设为 0.5。提交前磁盘场景仍保存 0.33 / 0.13 / 0.33 秒；用户说明编辑器已关闭，并明确要求按 0.5 倍速线性修改，现将敌人的 Startup / Active / Recover 保存为 0.66 / 0.26 / 0.66 秒。保留原动画过渡；这组最终参数未经 Play 验收，不据此认定视觉与判定完全同步。
+- 素材筛选与投入取舍：手册确认 Heavy 表示双手攻击，已定位 HeavyCombo A/B/C、HeavyFlourish、HeavyStab 候选；Controller 中保存的候选预览节点未接入正常动作链路，不算新招式完成。用户希望减少动画制作投入，优先使用现成片段与必要调速，不把手工动画编辑作为项目展示重点。
+- 保存差异修复：Plane 索引数据末尾再次出现上次的非法字符 y；沿用用户此前对同一处修复的授权，只删除该字符，核对为 600 个合法 UInt16 索引、最大索引 120，对应 121 个顶点，不重建网格。
+- 下周主节点（11/02–11/08）：设计并实现 Skeleton 完整敌人 FSM。先由用户明确行为状态、状态转换和攻击选择规则，再逐条接通与验收；AI 表达意图、Controller 唯一调度动作，继续复用 Movement / Perception 的完整入口。不在本次收工代写设计、扩展通用框架或确定最终招式数量。
+- 下次入口：先回归半速轻击的命中 / 恢复、玩家死亡目标清理与 Restart；随后讨论 Skeleton 的行为图与转换条件，再选择一个可验收的状态链路开始实现。提交包含本轮脚本、动画控制器 / 场景配置及工作记录；较早的无关玩家过渡参数、Player.cs 空白改动、日程 / 历史、空接口和生成的 UIElementsSchema 保留在本地。
 
 ### YYYY-MM-DD
 - 变更：
